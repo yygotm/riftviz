@@ -606,7 +606,7 @@ def main():
   </div>
 
   <section class=\"card\">
-    <h2 data-i18n=\"timeline_title\">時系列イベント（キル / オブジェクト / ワード）</h2>
+    <h2 data-i18n=\"timeline_title\">時系列イベント（キル / オブジェクト）</h2>
     <div class=\"toolbar\">
       <input id=\"q\" data-i18n-placeholder=\"search_ph\" placeholder=\"検索: 例) キル / ドラゴン / ワード / ルル など\" style=\"flex:1; min-width: 260px;\">
       <select id=\"team\">
@@ -658,7 +658,7 @@ const I18N = {{
     axis_dmg_dealt:'与ダメージ →', axis_dmg_taken:'← 被ダメージ',
     ally_lead:'▲ 味方リード', enemy_lead:'▼ 敵リード',
     legend_deaths:'Deaths ←', legend_kills:'→ K', legend_assists:'A',
-    timeline_title:'時系列イベント（キル / オブジェクト / ワード）',
+    timeline_title:'時系列イベント（キル / オブジェクト）',
     search_ph:'検索: 例) キル / ドラゴン / ワード / ルル など',
     team_all:'Team: 全部', team_ally:'味方', team_enemy:'敵',
     type_all:'Type: 全部',
@@ -680,7 +680,7 @@ const I18N = {{
     axis_dmg_dealt:'Damage Dealt →', axis_dmg_taken:'← Damage Taken',
     ally_lead:'▲ Ally Lead', enemy_lead:'▼ Enemy Lead',
     legend_deaths:'Deaths ←', legend_kills:'→ K', legend_assists:'A',
-    timeline_title:'Event Timeline (Kills / Objectives / Wards)',
+    timeline_title:'Event Timeline (Kills / Objectives)',
     search_ph:'Search: e.g. kill / dragon / ward / champion name',
     team_all:'Team: All', team_ally:'Ally', team_enemy:'Enemy',
     type_all:'Type: All',
