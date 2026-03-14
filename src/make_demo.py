@@ -80,7 +80,9 @@ print(f"[demo] Using: {match_path.name}")
 match_data = json.loads(match_path.read_text(encoding="utf-8"))
 timeline_data = json.loads(timeline_path.read_text(encoding="utf-8"))
 
-# ── anonymize summoner names ─────────────────────────────────────────────────
+# ── anonymize match data ──────────────────────────────────────────────────────
+DEMO_ID = f"{PLATFORM}_000000000"
+
 match_demo = copy.deepcopy(match_data)
 participants = match_demo["info"]["participants"]
 
@@ -91,11 +93,16 @@ for i, p in enumerate(participants):
     p["summonerName"]   = name
     # Preserve puuid (needed for ally/enemy detection — stays local, not in output HTML)
 
+# Replace identifying metadata
+match_demo["metadata"]["matchId"]  = DEMO_ID
+match_demo["info"]["gameDuration"] = 1380   # 23:00
+match_demo["info"]["gameVersion"]  = "16.4.0.0"  # keeps ddragon version (16.4.1) intact
+
 # ── write to temp dir and generate HTML ──────────────────────────────────────
 with tempfile.TemporaryDirectory() as tmpdir:
     tmp = Path(tmpdir)
-    demo_match     = tmp / match_path.name
-    demo_timeline  = tmp / timeline_path.name
+    demo_match     = tmp / f"{DEMO_ID}.json"
+    demo_timeline  = tmp / f"{DEMO_ID}_timeline.json"
     demo_match.write_text(json.dumps(match_demo, ensure_ascii=False), encoding="utf-8")
     demo_timeline.write_text(timeline_data if isinstance(timeline_data, str)
                              else json.dumps(timeline_data, ensure_ascii=False),
