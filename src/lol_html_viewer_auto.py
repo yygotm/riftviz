@@ -247,6 +247,12 @@ def main():
             return "不明"
         return champ_name(p.get("championId"))
 
+    def champ_from_pid_en(pid) -> str:
+        p = get_p(pid)
+        if not p:
+            return "Unknown"
+        return p.get("championName") or champ_name(p.get("championId"))
+
     def short_p(pid):
         p = get_p(pid)
         if not p:
@@ -257,12 +263,12 @@ def main():
         t = ev.get("type", "")
 
         if t == "CHAMPION_KILL":
-            killer = champ_from_pid(ev.get("killerId"))
-            victim = champ_from_pid(ev.get("victimId"))
+            killer = champ_from_pid_en(ev.get("killerId"))
+            victim = champ_from_pid_en(ev.get("victimId"))
             return f"⚔️ {killer} killed {victim}"
 
         if t == "ELITE_MONSTER_KILL":
-            killer = champ_from_pid(ev.get("killerId"))
+            killer = champ_from_pid_en(ev.get("killerId"))
             monster = ev.get("monsterType", "")
             sub = ev.get("monsterSubType", "")
             name_map = {
@@ -277,7 +283,7 @@ def main():
             return f"{icon} {killer} slew {m}"
 
         if t == "BUILDING_KILL":
-            killer = champ_from_pid(ev.get("killerId"))
+            killer = champ_from_pid_en(ev.get("killerId"))
             building = ev.get("buildingType", "")
             lane = ev.get("laneType", "")
             if building == "TOWER_BUILDING":
@@ -299,11 +305,11 @@ def main():
             return f"{icon} {killer} destroyed {b}{suffix}"
 
         if t == "WARD_PLACED":
-            who = champ_from_pid(ev.get("creatorId"))
+            who = champ_from_pid_en(ev.get("creatorId"))
             return f"👁️ {who} placed a ward"
 
         if t == "WARD_KILL":
-            who = champ_from_pid(ev.get("killerId"))
+            who = champ_from_pid_en(ev.get("killerId"))
             return f"🧹 {who} destroyed a ward"
 
         return ""
@@ -418,7 +424,7 @@ def main():
                 f"<tr class='{cls}'>"
                 f"<td>{html_escape(r['pos'])}</td>"
                 f"<td>{html_escape(r['player'])}</td>"
-                f"<td>{html_escape(r['champ'])}</td>"
+                f"<td data-champ-en=\"{html_escape(r['champName'])}\">{html_escape(r['champ'])}</td>"
                 f"<td>{r['k']}/{r['d']}/{r['a']}</td>"
                 f"<td>{r['kda']:.2f}</td>"
                 f"<td>{r['cs']}</td>"
@@ -702,6 +708,15 @@ function applyLang(lang) {{
   }});
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {{
     el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+  }});
+  document.querySelectorAll('[data-champ-en]').forEach(el => {{
+    if (lang === 'en') {{
+      if (!el.getAttribute('data-champ-ja')) el.setAttribute('data-champ-ja', el.textContent);
+      el.textContent = el.getAttribute('data-champ-en');
+    }} else {{
+      const ja = el.getAttribute('data-champ-ja');
+      if (ja) el.textContent = ja;
+    }}
   }});
   const btn = document.getElementById('lang-toggle');
   if (btn) btn.textContent = lang === 'ja' ? '🌐 EN' : '🌐 JA';
