@@ -509,11 +509,11 @@ def main():
 <style>
   :root {{ --bg:#0b0f17; --card:#121a2a; --text:#e9eef8; --muted:#9fb0cf; --line:#26334d;
     --blue:#2f7bf6; --red:#ff4d5a; --pill:#1b2740; }}
-  body {{ margin:0; font-family: system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans JP\", sans-serif; background:var(--bg); color:var(--text); }}
-  header {{ padding:16px 18px; border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(11,15,23,.95); backdrop-filter: blur(6px); z-index:10;}}
+  body {{ margin:0; font-family: system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans JP\", sans-serif; background:var(--bg); color:var(--text); overflow-x:hidden; }}
+  header {{ padding:16px 18px; border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(11,15,23,.95); backdrop-filter: blur(6px); z-index:10; box-sizing:border-box; }}
   header h1 {{ margin:0; font-size:18px; }}
   header .meta {{ margin-top:6px; color:var(--muted); font-size:12px; }}
-  main {{ max-width: 1100px; margin: 0 auto; padding: 16px; display:grid; gap: 12px; }}
+  main {{ max-width: 1400px; width:100%; box-sizing:border-box; margin: 0 auto; padding: 16px; display:grid; gap: 12px; }}
   .card {{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding: 12px; }}
   h2 {{ margin: 6px 0 12px; font-size: 15px; }}
   .table-wrap {{ overflow:auto; }}
@@ -567,10 +567,8 @@ def main():
   #lang-toggle {{ background:var(--pill); border:1px solid var(--line); color:var(--text);
     padding:5px 14px; border-radius:8px; cursor:pointer; font-size:12px; margin-top:8px; }}
   #lang-toggle:hover {{ background:var(--blue); color:#fff; }}
-  .charts-wrap {{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }}
+  .charts-wrap {{ display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:12px; }}
   .charts-wrap > .card.chart-full {{ grid-column:1/-1; }}
-  @media(max-width:680px) {{ .charts-wrap {{ grid-template-columns:1fr; }}
-    .charts-wrap > .card {{ grid-column:1 !important; }} }}
   .chart-label {{ margin:0 0 10px; font-size:14px; font-weight:600;
     letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }}
   canvas {{ display:block; }}
