@@ -55,8 +55,11 @@ PLATFORM_TO_REGION = {
 _env       = load_env(ROOT / ".env")
 USER_PUUID = _env.get("PUUID", "")
 PLATFORM   = _env.get("PLATFORM", "JP1").upper()
+_LANG = _env.get("LANG", "ja").lower()  # module-level default; overridden by --lang in main()
+
 if PLATFORM not in PLATFORM_TO_REGION:
-    print(f"[WARN] Unknown PLATFORM '{PLATFORM}' — falling back to JP1")
+    print(f"[WARN] Unknown PLATFORM '{PLATFORM}' — falling back to JP1" if _LANG != "ja"
+          else f"[WARN] 不明な PLATFORM '{PLATFORM}' — JP1 にフォールバックします")
     PLATFORM = "JP1"
 
 MATCH_RE = re.compile(rf"^{re.escape(PLATFORM)}_(\d+)\.json$")
@@ -110,7 +113,7 @@ def load_json(p: Path):
 
 
 def pick_latest_pair(base_dir: Path) -> tuple[Path, Path]:
-    """同フォルダの中の最新の JP1_\d+.json を match として採用し、対応timelineを探す。"""
+    r"""同フォルダの中の最新の JP1_\d+.json を match として採用し、対応timelineを探す。"""
     files = [p for p in base_dir.iterdir() if p.is_file()]
 
     match_candidates = [p for p in files if MATCH_RE.match(p.name)]
@@ -129,7 +132,8 @@ def pick_latest_pair(base_dir: Path) -> tuple[Path, Path]:
         raise FileNotFoundError(f"No timeline JSON found: {base_dir}/{PLATFORM}_\\d+_timeline.json")
 
     fallback = max(tl_candidates, key=lambda p: p.stat().st_mtime)
-    print(f"[WARN] Matching timeline not found — using latest available: {fallback.name}")
+    print(f"[WARN] 対応する timeline が見つかりません — 最新を使用: {fallback.name}" if _LANG == "ja"
+          else f"[WARN] Matching timeline not found — using latest available: {fallback.name}")
     return match_path, fallback
 
 
@@ -139,6 +143,10 @@ def main():
     ap.add_argument("--no-csv", action="store_true", help="CSVを出さない（HTMLのみ）")
     ap.add_argument("--lang", default="ja", choices=["ja", "en"], help="Champion name language for the table (default: ja)")
     args = ap.parse_args()
+
+    # --lang overrides the .env LANG for console messages inside main()
+    global _LANG
+    _LANG = args.lang
 
     base_dir = Path(args.dir).expanduser().resolve()
 
@@ -157,9 +165,11 @@ def main():
         with urllib.request.urlopen(dd_url, timeout=10) as r:
             dd_data = json.loads(r.read().decode("utf-8"))
         champ_map = {v["key"]: v["name"] for v in dd_data["data"].values()}
-        print(f"[champ] Fetched {len(champ_map)} champions from Data Dragon {dd_version} ({dd_locale})")
+        print(f"[champ] {len(champ_map)} チャンプ名を Data Dragon {dd_version} ({dd_locale}) から取得" if _LANG == "ja"
+              else f"[champ] Fetched {len(champ_map)} champions from Data Dragon {dd_version} ({dd_locale})")
     except Exception as e:
-        print(f"[WARN] Data Dragon fetch failed ({e}) — champion names will show as ID:xxx")
+        print(f"[WARN] Data Dragon の取得に失敗 ({e}) — チャンプ名は ID:xxx で表示されます" if _LANG == "ja"
+              else f"[WARN] Data Dragon fetch failed ({e}) — champion names will show as ID:xxx")
 
     def champ_name(champ_id: int) -> str:
         return champ_map.get(str(champ_id), f"ID:{champ_id}")
