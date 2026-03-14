@@ -6,12 +6,14 @@ A local League of Legends match analysis tool that fetches data from the Riot Ga
 
 ## Demo
 
-<img width="1280" alt="Stats tables and KDA Breakdown" src="https://github.com/user-attachments/assets/ffded0fb-e692-4112-b331-7baec0be5b92" />
-<img width="1280" alt="KDA Ratio / Damage / Gold charts" src="https://github.com/user-attachments/assets/0c3092f2-94df-4532-bc18-e9e6672710e3" />
-<img width="1280" alt="CS / Vision / CC / Scatter plot" src="https://github.com/user-attachments/assets/4cd5ca11-8724-4e39-820f-6ad18c0dba48" />
-<img width="1280" alt="Performance radar / KP / Dead Time" src="https://github.com/user-attachments/assets/43075911-bc24-47ee-8492-4a8533d27f31" />
-<img width="1280" alt="Gold diff timeline" src="https://github.com/user-attachments/assets/dcf55ded-3c6b-4c7a-8976-d4dc8f7ae65d" />
-<img width="1280" alt="Event timeline" src="https://github.com/user-attachments/assets/9dfccf4f-fa4d-48d3-a169-4bfeb5217f3e" />
+<img width="1280" alt="Stats tables" src="https://github.com/user-attachments/assets/77f7da20-25b0-43e9-9fa2-6b41f5d9a1b2" />
+<img width="1280" alt="KDA Breakdown" src="https://github.com/user-attachments/assets/2f62e7a6-fb82-434a-b0a9-9e5e129534ee" />
+<img width="1280" alt="KDA Ratio / Damage / Gold" src="https://github.com/user-attachments/assets/47bae183-6205-4e90-b4b5-a53cd1b252da" />
+<img width="1280" alt="CS / Vision / CC / Scatter plot" src="https://github.com/user-attachments/assets/cd22b139-afd4-4cf5-98ad-39c855ce9ec9" />
+<img width="1280" alt="Performance radar (Ally / Enemy)" src="https://github.com/user-attachments/assets/c949b35f-13b9-4807-a2c0-3ab76f3f93e8" />
+<img width="1280" alt="Kill Participation / Dead Time" src="https://github.com/user-attachments/assets/4c2ca6d9-8803-4ad4-818d-6f45efb6996d" />
+<img width="1280" alt="Team gold lead timeline" src="https://github.com/user-attachments/assets/9576d5d0-31ec-420a-ac97-416185c4972a" />
+<img width="1280" alt="Event timeline" src="https://github.com/user-attachments/assets/785390a4-e52b-4e96-a56d-d13007940a3d" />
 
 ---
 
