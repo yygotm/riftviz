@@ -139,11 +139,10 @@ Output is saved to `output/out_TIMESTAMP.html`. Open it directly in your browser
 riftviz/
 ├── .env                         # API_KEY, PLATFORM, PUUID (gitignored)
 ├── run.bat                      # Windows shortcut
-├── assets/
-│   └── 00_champ.json            # Champion ID → display name mapping
 ├── src/
 │   ├── fetch_match_data.py      # Fetch match data from Riot API
-│   └── lol_html_viewer_auto.py  # Generate the HTML viewer
+│   ├── lol_html_viewer_auto.py  # Generate the HTML viewer
+│   └── make_demo.py             # Generate demo HTML with anonymized names
 ├── data/                        # Match JSON files (gitignored)
 └── output/                      # Generated HTML / CSV (gitignored)
 ```

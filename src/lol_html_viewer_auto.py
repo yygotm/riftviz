@@ -18,6 +18,7 @@ LoL match + timeline JSON から
 """
 
 import json, html, argparse, csv, re
+import urllib.request
 from pathlib import Path
 from datetime import datetime
 import os
@@ -59,9 +60,6 @@ PLATFORM   = _env.get("PLATFORM", "JP1").upper()
 if PLATFORM not in PLATFORM_TO_REGION:
     print(f"[WARN] 不明な PLATFORM '{PLATFORM}' — JP1 にフォールバック")
     PLATFORM = "JP1"
-
-# ===== 固定値 =====
-CHAMP_FILE = ASSETS_DIR / "00_champ.json"
 
 MATCH_RE = re.compile(rf"^{re.escape(PLATFORM)}_(\d+)\.json$")
 TL_RE    = re.compile(rf"^{re.escape(PLATFORM)}_(\d+)_timeline\.json$")
@@ -146,13 +144,22 @@ def main():
     base_dir = Path(args.dir).expanduser().resolve()
 
     match_path, timeline_path = pick_latest_pair(base_dir)
-    champ_path = CHAMP_FILE
-    if not champ_path.exists():
-        raise FileNotFoundError(f"champ が見つからない: {champ_path}")
 
     match = load_json(match_path)
     timeline = load_json(timeline_path)
-    champ_map = load_json(champ_path)
+
+    # ── チャンプ名を Data Dragon から取得 ──────────────────────────────────────
+    gv_parts  = match["info"].get("gameVersion", "0.0").split(".")[:2]
+    dd_version = ".".join(gv_parts) + ".1"
+    champ_map = {}
+    try:
+        dd_url = f"https://ddragon.leagueoflegends.com/cdn/{dd_version}/data/ja_JP/champion.json"
+        with urllib.request.urlopen(dd_url, timeout=10) as r:
+            dd_data = json.loads(r.read().decode("utf-8"))
+        champ_map = {v["key"]: v["name"] for v in dd_data["data"].values()}
+        print(f"[champ] Fetched {len(champ_map)} champions from Data Dragon {dd_version}")
+    except Exception as e:
+        print(f"[WARN] Data Dragon fetch failed ({e}) — champion names will show as ID:xxx")
 
     def champ_name(champ_id: int) -> str:
         return champ_map.get(str(champ_id), f"ID:{champ_id}")
@@ -489,7 +496,7 @@ def main():
         f"Version: {game_info.get('gameVersion','')}"
     )
 
-    used_files = f"match: {match_path.name} / timeline: {timeline_path.name} / champ: {champ_path.name}"
+    used_files = f"match: {match_path.name} / timeline: {timeline_path.name} / champ: ddragon {dd_version}"
 
     html_doc = f"""<!doctype html>
 <html lang=\"ja\">
@@ -1664,7 +1671,6 @@ render();
     print("used:")
     print(" ", match_path)
     print(" ", timeline_path)
-    print(" ", champ_path)
 
 
 if __name__ == "__main__":
