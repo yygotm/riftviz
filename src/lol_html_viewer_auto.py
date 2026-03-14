@@ -906,7 +906,7 @@ render();
     orangeA: '#4a2a00', orangeB: '#ff9500',
   }};
 
-  const ROW = 36, LABEL_W = 128;
+  const ROW = 52, LABEL_W = 128;
 
   // ── チャンピオンアイコン プリロード ───────────────────────────────────────
   const champIcons = {{}};
@@ -941,7 +941,7 @@ render();
 
   function drawLabel(ctx, p, x, y, h) {{
     const isFriend = p.teamId === friendTeamId;
-    const iconR = 11;
+    const iconR = 22;
     const iconCx = x - iconR - 6;
     const iconCy = y + h / 2;
     if (iconsReady) {{
@@ -1241,7 +1241,7 @@ render();
       const isFriend = p.teamId === friendTeamId;
       const cx = PAD.l + (p.dmg / maxDmg) * chartW;
       const cy = PAD.t + chartH * (1 - p.taken / maxTaken);
-      const r = p.is_user ? 10 : 8;
+      const r = p.is_user ? 20 : 16;
 
       // グロー（自プレイヤー）— 光輪を先に描いてからアイコン
       if (p.is_user) {{
@@ -1277,7 +1277,7 @@ render();
   // --- レーダー インタラクション ヘルパー ---
   const _radarState = new Map();
   const _RADAR_KEYS  = ['kda','dmg','gold','cs','vision','cc'];
-  const _LEGEND_H    = 60;
+  const _LEGEND_H    = 84;
 
   function _radarGeom(canvas) {{
     const W      = canvas.parentElement.clientWidth - 24;
@@ -1314,9 +1314,9 @@ render();
     const legY = H - _LEGEND_H + 6;
     const colW = Math.floor(W / 3);
     return Array.from({{length: n}}, (_, pi) => ({{
-      iconR: 9,
-      iconCx: (pi % 3) * colW + 8 + 9,
-      iconCy: legY + Math.floor(pi / 3) * 24 + 9,
+      iconR: 18,
+      iconCx: (pi % 3) * colW + 8 + 18,
+      iconCy: legY + Math.floor(pi / 3) * 36 + 18,
     }}));
   }}
 
@@ -1487,11 +1487,11 @@ render();
     const colW = Math.floor(W / 3);
     teamPlayers.forEach((p, pi) => {{
       const lx   = (pi % 3) * colW + 8;
-      const ly   = legY + Math.floor(pi / 3) * 24;
+      const ly   = legY + Math.floor(pi / 3) * 36;
       const isUser   = p.is_user;
       const isActive = activeIdx === null || pi === activeIdx;
       const color    = isUser ? COL.user : TEAM_COLORS[pi % TEAM_COLORS.length];
-      const iconR = 9, iconCx = lx + iconR, iconCy = ly + iconR;
+      const iconR = 18, iconCx = lx + iconR, iconCy = ly + iconR;
 
       ctx.globalAlpha = isActive ? 1 : 0.3;
       ctx.fillStyle = isFriendTeam ? '#1a3a6a' : '#5a1a20';
