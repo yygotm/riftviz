@@ -103,7 +103,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
 
     # Run viewer (suppressing organize_all_outputs to avoid archiving current output)
     import lol_html_viewer_auto
-    sys.argv = ["lol_html_viewer_auto.py", "--dir", str(tmp), "--no-csv"]
+    sys.argv = ["lol_html_viewer_auto.py", "--dir", str(tmp), "--no-csv", "--lang", "en"]
 
     # Capture the output file path by monkey-patching OUTPUT_DIR temporarily
     import io, contextlib

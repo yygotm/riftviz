@@ -139,6 +139,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", default=str(DATA_DIR), help="JSONが置いてあるディレクトリ（デフォルト: data/）")
     ap.add_argument("--no-csv", action="store_true", help="CSVを出さない（HTMLのみ）")
+    ap.add_argument("--lang", default="ja", choices=["ja", "en"], help="Champion name language for the table (default: ja)")
     args = ap.parse_args()
 
     base_dir = Path(args.dir).expanduser().resolve()
@@ -151,13 +152,14 @@ def main():
     # ── チャンプ名を Data Dragon から取得 ──────────────────────────────────────
     gv_parts  = match["info"].get("gameVersion", "0.0").split(".")[:2]
     dd_version = ".".join(gv_parts) + ".1"
+    dd_locale = "en_US" if args.lang == "en" else "ja_JP"
     champ_map = {}
     try:
-        dd_url = f"https://ddragon.leagueoflegends.com/cdn/{dd_version}/data/ja_JP/champion.json"
+        dd_url = f"https://ddragon.leagueoflegends.com/cdn/{dd_version}/data/{dd_locale}/champion.json"
         with urllib.request.urlopen(dd_url, timeout=10) as r:
             dd_data = json.loads(r.read().decode("utf-8"))
         champ_map = {v["key"]: v["name"] for v in dd_data["data"].values()}
-        print(f"[champ] Fetched {len(champ_map)} champions from Data Dragon {dd_version}")
+        print(f"[champ] Fetched {len(champ_map)} champions from Data Dragon {dd_version} ({dd_locale})")
     except Exception as e:
         print(f"[WARN] Data Dragon fetch failed ({e}) — champion names will show as ID:xxx")
 
