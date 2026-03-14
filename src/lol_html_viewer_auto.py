@@ -11,8 +11,6 @@ LoL match + timeline JSON から
   * CHAMPION_KILL
   * ELITE_MONSTER_KILL
   * BUILDING_KILL
-  * WARD_PLACED
-  * WARD_KILL
 - イベント文言を日本語で簡潔化（例: "02:44 オラフがガレンをキル"）
 - killerId / victimId / creatorId が 0 や None で participant を引けないケースを安全に処理（"不明"）
 """
@@ -313,14 +311,6 @@ def main():
             suffix = f" ({l})" if l else ""
             return f"{icon} {killer} destroyed {b}{suffix}"
 
-        if t == "WARD_PLACED":
-            who = champ_from_pid_en(ev.get("creatorId"))
-            return f"👁️ {who} placed a ward"
-
-        if t == "WARD_KILL":
-            who = champ_from_pid_en(ev.get("killerId"))
-            return f"🧹 {who} destroyed a ward"
-
         return ""
 
     def event_to_text(ev):
@@ -371,14 +361,6 @@ def main():
             l = lane_map.get(lane, "")
             suffix = f"（{l}）" if l else ""
             return f"{icon} {killer}が{b}{suffix}を破壊"
-
-        if t == "WARD_PLACED":
-            who = champ_from_pid(ev.get("creatorId"))
-            return f"👁️ {who}がワードを設置"
-
-        if t == "WARD_KILL":
-            who = champ_from_pid(ev.get("killerId"))
-            return f"🧹 {who}がワードを破壊"
 
         return ""
 
