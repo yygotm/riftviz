@@ -1,3 +1,4 @@
+import argparse
 import requests
 import os
 import json
@@ -30,6 +31,37 @@ PLATFORM_TO_REGION = {
     "TH2": "sea",      "TW2": "sea",      "VN2": "sea",
 }
 
+QUEUE_PRESETS = {
+    "swift":        1700,
+    "ranked-solo":  420,
+    "ranked-flex":  440,
+    "normal-draft": 400,
+    "normal-blind": 430,
+    "aram":         450,
+}
+
+# --- CLI 引数 ---
+parser = argparse.ArgumentParser(description="Fetch latest LoL match and generate HTML viewer")
+parser.add_argument(
+    "--queue", "-q",
+    default="swift",
+    help=(
+        "Queue to fetch. Named presets: swift (1700), ranked-solo (420), "
+        "ranked-flex (440), normal-draft (400), normal-blind (430), aram (450). "
+        "Or pass a numeric queue ID directly. Default: swift"
+    ),
+)
+args = parser.parse_args()
+
+if args.queue.lstrip("-").isdigit():
+    QUEUE_ID = int(args.queue)
+elif args.queue in QUEUE_PRESETS:
+    QUEUE_ID = QUEUE_PRESETS[args.queue]
+else:
+    print(f"❌ 不明なキュー名 '{args.queue}'。使用可能: {', '.join(QUEUE_PRESETS)} または数値ID")
+    exit()
+
+# --- .env 読み込み ---
 _env     = load_env(ROOT / ".env")
 API_KEY  = _env.get("API_KEY", "")
 PLATFORM = _env.get("PLATFORM", "JP1").upper()
@@ -45,6 +77,8 @@ if PLATFORM not in PLATFORM_TO_REGION:
 
 HEADERS = {"X-Riot-Token": API_KEY}
 
+print(f"🎮 対象キュー: {args.queue} (queue={QUEUE_ID})")
+
 # --- ディレクトリ準備 ---
 os.makedirs(ARCHIVE_DIR, exist_ok=True)
 
@@ -55,7 +89,7 @@ def backup_if_exists(filename):
         print(f"📦 既存ファイル {filename} を data/archive/ に移動しました")
 
 # --- 最新のマッチID 1件取得 ---
-ids_url = f"https://{REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/{PUUID}/ids?start=0&count=5&queue=1700"
+ids_url = f"https://{REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/{PUUID}/ids?start=0&count=5&queue={QUEUE_ID}"
 ids_res = requests.get(ids_url, headers=HEADERS)
 
 if ids_res.status_code == 401:

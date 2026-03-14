@@ -86,10 +86,30 @@ Copy the `puuid` value into your `.env` file as `PUUID=...`.
 ### Step 1 — Fetch the latest match and generate HTML
 
 ```bash
+# Swift Play (default)
 python src/match.py
+
+# Ranked Solo/Duo
+python src/match.py --queue ranked-solo
+
+# Ranked Flex
+python src/match.py --queue ranked-flex
 ```
 
 Pulls the latest match from the Riot API, saves it to `data/`, and automatically generates the HTML viewer.
+
+**`--queue` / `-q` options:**
+
+| Name | Queue ID | Mode |
+|---|---|---|
+| `swift` | 1700 | Swift Play (default) |
+| `ranked-solo` | 420 | Ranked Solo/Duo |
+| `ranked-flex` | 440 | Ranked Flex |
+| `normal-draft` | 400 | Normal Draft |
+| `normal-blind` | 430 | Normal Blind |
+| `aram` | 450 | ARAM |
+
+You can also pass a numeric queue ID directly: `--queue 900`
 
 ### Step 2 — Regenerate HTML from saved data
 
@@ -130,16 +150,9 @@ riftviz/
 
 ---
 
-## Queue Support
-
-Currently targets **Swift Play (Queue ID: 1700)**.
-Change `queue=1700` in `src/match.py` to support other queues.
-
----
-
 ## Disclaimer
 
-> graph-lol isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. League of Legends and Riot Games are trademarks or registered trademarks of Riot Games, Inc.
+> riftviz isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. League of Legends and Riot Games are trademarks or registered trademarks of Riot Games, Inc.
 
 Champion icons are loaded at runtime from the [Data Dragon CDN](https://developer.riotgames.com/docs/lol#data-dragon). No image assets are stored in this repository.
 
