@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# pylint: disable=C0302,R0912,R0914,R0915,C0103,W0603,R0801
 """
 LoL match + timeline JSON から
 - 味方/敵の一覧表（基本スタッツ）
@@ -15,19 +16,24 @@ LoL match + timeline JSON から
 - killerId / victimId / creatorId が 0 や None で participant を引けないケースを安全に処理（"不明"）
 """
 
-import json, html, argparse, csv, re
-import urllib.request
-from pathlib import Path
-from datetime import datetime
-import os
-import shutil
+import argparse
+import csv
 import glob
+import html
+import json
+import os
+import re
+import shutil
+import urllib.request
+from datetime import datetime
+from pathlib import Path
 
 # ===== プロジェクトルートと各ディレクトリ =====
-ROOT       = Path(__file__).resolve().parent.parent
-DATA_DIR   = ROOT / "data"
+ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = ROOT / "data"
 OUTPUT_DIR = ROOT / "output"
 ASSETS_DIR = ROOT / "assets"
+
 
 # ===== .env パーサー =====
 def load_env(path):
@@ -44,32 +50,50 @@ def load_env(path):
         pass
     return env
 
+
 PLATFORM_TO_REGION = {
-    "BR1": "americas", "LA1": "americas", "LA2": "americas", "NA1": "americas",
-    "EUN1": "europe",  "EUW1": "europe",  "TR1": "europe",   "RU": "europe",
-    "JP1": "asia",     "KR": "asia",
-    "OC1": "sea",      "PH2": "sea",      "SG2": "sea",
-    "TH2": "sea",      "TW2": "sea",      "VN2": "sea",
+    "BR1": "americas",
+    "LA1": "americas",
+    "LA2": "americas",
+    "NA1": "americas",
+    "EUN1": "europe",
+    "EUW1": "europe",
+    "TR1": "europe",
+    "RU": "europe",
+    "JP1": "asia",
+    "KR": "asia",
+    "OC1": "sea",
+    "PH2": "sea",
+    "SG2": "sea",
+    "TH2": "sea",
+    "TW2": "sea",
+    "VN2": "sea",
 }
 
-_env       = load_env(ROOT / ".env")
+_env = load_env(ROOT / ".env")
 USER_PUUID = _env.get("PUUID", "")
-PLATFORM   = _env.get("PLATFORM", "JP1").upper()
-_LANG = _env.get("LANG", "ja").lower()  # module-level default; overridden by --lang in main()
+PLATFORM = _env.get("PLATFORM", "JP1").upper()
+_LANG = _env.get(
+    "LANG", "ja"
+).lower()  # module-level default; overridden by --lang in main()
 
 if PLATFORM not in PLATFORM_TO_REGION:
-    print(f"[WARN] Unknown PLATFORM '{PLATFORM}' — falling back to JP1" if _LANG != "ja"
-          else f"[WARN] 不明な PLATFORM '{PLATFORM}' — JP1 にフォールバックします")
+    print(
+        f"[WARN] Unknown PLATFORM '{PLATFORM}' — falling back to JP1"
+        if _LANG != "ja"
+        else f"[WARN] 不明な PLATFORM '{PLATFORM}' — JP1 にフォールバックします"
+    )
     PLATFORM = "JP1"
 
 MATCH_RE = re.compile(rf"^{re.escape(PLATFORM)}_(\d+)\.json$")
-TL_RE    = re.compile(rf"^{re.escape(PLATFORM)}_(\d+)_timeline\.json$")
+TL_RE = re.compile(rf"^{re.escape(PLATFORM)}_(\d+)_timeline\.json$")
 
 ALLOWED_EVENT_TYPES = {
     "CHAMPION_KILL",
     "ELITE_MONSTER_KILL",
     "BUILDING_KILL",
 }
+
 
 def organize_all_outputs():
     archive_dir = OUTPUT_DIR / "archive"
@@ -91,7 +115,7 @@ def organize_all_outputs():
     # ここでは、最も新しいファイル1件（最新のHTMLかCSV）を基準とし、
     # それ以外の古いタイムスタンプを持つファイルを移動させます。
     latest_time = os.path.getmtime(all_files[0])
-    
+
     for f in all_files:
         # 最新ファイル（またはそれとほぼ同時刻に生成されたファイル）以外を移動
         # 1秒程度の誤差は許容範囲として判定
@@ -100,12 +124,13 @@ def organize_all_outputs():
             try:
                 shutil.move(f, str(dest))
                 print(f"Moved to output/archive/: {os.path.basename(f)}")
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 print(f"Error moving {f}: {e}")
+
 
 def fmt_time(ms: int) -> str:
     s = (ms or 0) // 1000
-    return f"{s//60:02d}:{s%60:02d}"
+    return f"{s // 60:02d}:{s % 60:02d}"
 
 
 def load_json(p: Path):
@@ -129,19 +154,33 @@ def pick_latest_pair(base_dir: Path) -> tuple[Path, Path]:
 
     tl_candidates = [p for p in files if TL_RE.match(p.name)]
     if not tl_candidates:
-        raise FileNotFoundError(f"No timeline JSON found: {base_dir}/{PLATFORM}_\\d+_timeline.json")
+        raise FileNotFoundError(
+            f"No timeline JSON found: {base_dir}/{PLATFORM}_\\d+_timeline.json"
+        )
 
     fallback = max(tl_candidates, key=lambda p: p.stat().st_mtime)
-    print(f"[WARN] 対応する timeline が見つかりません — 最新を使用: {fallback.name}" if _LANG == "ja"
-          else f"[WARN] Matching timeline not found — using latest available: {fallback.name}")
+    print(
+        f"[WARN] 対応する timeline が見つかりません — 最新を使用: {fallback.name}"
+        if _LANG == "ja"
+        else f"[WARN] Matching timeline not found — using latest available: {fallback.name}"
+    )
     return match_path, fallback
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dir", default=str(DATA_DIR), help="JSONが置いてあるディレクトリ（デフォルト: data/）")
+    ap.add_argument(
+        "--dir",
+        default=str(DATA_DIR),
+        help="JSONが置いてあるディレクトリ（デフォルト: data/）",
+    )
     ap.add_argument("--no-csv", action="store_true", help="CSVを出さない（HTMLのみ）")
-    ap.add_argument("--lang", default="ja", choices=["ja", "en"], help="Champion name language for the table (default: ja)")
+    ap.add_argument(
+        "--lang",
+        default="ja",
+        choices=["ja", "en"],
+        help="Champion name language for the table (default: ja)",
+    )
     args = ap.parse_args()
 
     # --lang overrides the .env LANG for console messages inside main()
@@ -156,7 +195,7 @@ def main():
     timeline = load_json(timeline_path)
 
     # ── チャンプ名を Data Dragon から取得 ──────────────────────────────────────
-    gv_parts  = match["info"].get("gameVersion", "0.0").split(".")[:2]
+    gv_parts = match["info"].get("gameVersion", "0.0").split(".")[:2]
     dd_version = ".".join(gv_parts) + ".1"
     dd_locale = "en_US" if args.lang == "en" else "ja_JP"
     champ_map = {}
@@ -165,11 +204,17 @@ def main():
         with urllib.request.urlopen(dd_url, timeout=10) as r:
             dd_data = json.loads(r.read().decode("utf-8"))
         champ_map = {v["key"]: v["name"] for v in dd_data["data"].values()}
-        print(f"[champ] {len(champ_map)} チャンプ名を Data Dragon {dd_version} ({dd_locale}) から取得" if _LANG == "ja"
-              else f"[champ] Fetched {len(champ_map)} champions from Data Dragon {dd_version} ({dd_locale})")
-    except Exception as e:
-        print(f"[WARN] Data Dragon の取得に失敗 ({e}) — チャンプ名は ID:xxx で表示されます" if _LANG == "ja"
-              else f"[WARN] Data Dragon fetch failed ({e}) — champion names will show as ID:xxx")
+        print(
+            f"[champ] {len(champ_map)} チャンプ名を Data Dragon {dd_version} ({dd_locale}) から取得"
+            if _LANG == "ja"
+            else f"[champ] Fetched {len(champ_map)} champions from Data Dragon {dd_version} ({dd_locale})"
+        )
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        print(
+            f"[WARN] Data Dragon の取得に失敗 ({e}) — チャンプ名は ID:xxx で表示されます"
+            if _LANG == "ja"
+            else f"[WARN] Data Dragon fetch failed ({e}) — champion names will show as ID:xxx"
+        )
 
     def champ_name(champ_id: int) -> str:
         return champ_map.get(str(champ_id), f"ID:{champ_id}")
@@ -194,7 +239,7 @@ def main():
         tl = p.get("riotIdTagline") or ""
         if gn and tl:
             return f"{gn}#{tl}"
-        return (p.get("summonerName") or gn or f"PID:{p.get('participantId')}")
+        return p.get("summonerName") or gn or f"PID:{p.get('participantId')}"
 
     def team_label(team_id: int) -> str:
         if team_id == user_team_id:
@@ -203,16 +248,11 @@ def main():
             return "敵"
         return ""
 
-    def team_label_en(team_id: int) -> str:
-        if team_id == user_team_id:
-            return "Ally"
-        if team_id in (100, 200):
-            return "Enemy"
-        return ""
-
     def row_for(p):
         k, d, a = p.get("kills", 0), p.get("deaths", 0), p.get("assists", 0)
-        cs = (p.get("totalMinionsKilled", 0) or 0) + (p.get("neutralMinionsKilled", 0) or 0)
+        cs = (p.get("totalMinionsKilled", 0) or 0) + (
+            p.get("neutralMinionsKilled", 0) or 0
+        )
         dmg = p.get("totalDamageDealtToChampions", 0) or 0
         taken = p.get("totalDamageTaken", 0) or 0
         gold = p.get("goldEarned", 0) or 0
@@ -230,7 +270,9 @@ def main():
             "champ": champ_name(p.get("championId")),
             "champName": champ_en,
             "pid": p.get("participantId"),
-            "k": k, "d": d, "a": a,
+            "k": k,
+            "d": d,
+            "a": a,
             "kda": (k + a) / max(1, d),
             "cs": cs,
             "gold": gold,
@@ -250,7 +292,7 @@ def main():
     friend_team_id = user_team_id
     enemy_team_id = 200 if friend_team_id == 100 else 100
     friend_rows = team100 if friend_team_id == 100 else team200
-    enemy_rows  = team200 if friend_team_id == 100 else team100
+    enemy_rows = team200 if friend_team_id == 100 else team100
 
     def get_p(pid):
         # timelineイベントには 0 / None が入ることがあるので安全に
@@ -269,12 +311,6 @@ def main():
         if not p:
             return "Unknown"
         return p.get("championName") or champ_name(p.get("championId"))
-
-    def short_p(pid):
-        p = get_p(pid)
-        if not p:
-            return "不明"
-        return f"{champ_name(p.get('championId'))}({display_name(p)})"
 
     def event_to_text_en(ev):
         t = ev.get("type", "")
@@ -317,8 +353,8 @@ def main():
                 "MID_LANE": "Mid",
                 "BOT_LANE": "Bot",
             }
-            l = lane_map.get(lane, "")
-            suffix = f" ({l})" if l else ""
+            lane_label = lane_map.get(lane, "")
+            suffix = f" ({lane_label})" if lane_label else ""
             return f"{icon} {killer} destroyed {b}{suffix}"
 
         return ""
@@ -368,8 +404,8 @@ def main():
                 "MID_LANE": "ミッド",
                 "BOT_LANE": "ボット",
             }
-            l = lane_map.get(lane, "")
-            suffix = f"（{l}）" if l else ""
+            lane_label = lane_map.get(lane, "")
+            suffix = f"（{lane_label}）" if lane_label else ""
             return f"{icon} {killer}が{b}{suffix}を破壊"
 
         return ""
@@ -392,21 +428,34 @@ def main():
                     break
 
             user_involved = user_pid is not None and user_pid in [
-                ev.get("killerId"), ev.get("victimId"), ev.get("creatorId"), ev.get("participantId")
+                ev.get("killerId"),
+                ev.get("victimId"),
+                ev.get("creatorId"),
+                ev.get("participantId"),
             ]
 
-            events.append({
-                "t": ts,
-                "time": fmt_time(ts),
-                "type": ev.get("type", ""),
-                "teamId": teamId,
-                "team": ("味方" if teamId == user_team_id else ("敵" if teamId in (100, 200) else "")),
-                "team_en": ("Ally" if teamId == user_team_id else ("Enemy" if teamId in (100, 200) else "")),
-                "text": event_to_text(ev),
-                "text_en": event_to_text_en(ev),
-                "is_user": user_involved,
-                "raw": ev,
-            })
+            events.append(
+                {
+                    "t": ts,
+                    "time": fmt_time(ts),
+                    "type": ev.get("type", ""),
+                    "teamId": teamId,
+                    "team": (
+                        "味方"
+                        if teamId == user_team_id
+                        else ("敵" if teamId in (100, 200) else "")
+                    ),
+                    "team_en": (
+                        "Ally"
+                        if teamId == user_team_id
+                        else ("Enemy" if teamId in (100, 200) else "")
+                    ),
+                    "text": event_to_text(ev),
+                    "text_en": event_to_text_en(ev),
+                    "is_user": user_involved,
+                    "raw": ev,
+                }
+            )
 
     # textが空のものは落とす（欠損イベントなど）
     events = [e for e in events if e.get("text")]
@@ -417,8 +466,18 @@ def main():
 
     def table_html(rows, title_key, team_id):
         title_ja = "味方チーム" if title_key == "ally_team" else "敵チーム"
-        title_en = "Ally Team" if title_key == "ally_team" else "Enemy Team"
-        head = ["POS", "Player", "Champion", "K/D/A", "KDA", "CS", "Gold", "DMG", "Vision", "CC"]
+        head = [
+            "POS",
+            "Player",
+            "Champion",
+            "K/D/A",
+            "KDA",
+            "CS",
+            "Gold",
+            "DMG",
+            "Vision",
+            "CC",
+        ]
         trs = []
         for r in rows:
             cls = "user" if r["is_user"] else ""
@@ -449,17 +508,32 @@ def main():
         """
 
     events_json = json.dumps(events, ensure_ascii=False)
-    players_json = json.dumps([
-        {"champ": r["champ"], "champName": r["champName"], "player": r["player"],
-         "k": r["k"], "d": r["d"], "a": r["a"],
-         "kda": round(r["kda"], 4), "cc": r["cc"],
-         "dmg": r["dmg"], "taken": r["taken"],
-         "gold": r["gold"], "cs": r["cs"], "vision": r["vision"],
-         "kp": round(r["kp"], 4), "dead_s": r["dead_s"],
-         "pid": r["pid"],
-         "teamId": r["teamId"], "is_user": r["is_user"]}
-        for r in friend_rows + enemy_rows
-    ], ensure_ascii=False)
+    players_json = json.dumps(
+        [
+            {
+                "champ": r["champ"],
+                "champName": r["champName"],
+                "player": r["player"],
+                "k": r["k"],
+                "d": r["d"],
+                "a": r["a"],
+                "kda": round(r["kda"], 4),
+                "cc": r["cc"],
+                "dmg": r["dmg"],
+                "taken": r["taken"],
+                "gold": r["gold"],
+                "cs": r["cs"],
+                "vision": r["vision"],
+                "kp": round(r["kp"], 4),
+                "dead_s": r["dead_s"],
+                "pid": r["pid"],
+                "teamId": r["teamId"],
+                "is_user": r["is_user"],
+            }
+            for r in friend_rows + enemy_rows
+        ],
+        ensure_ascii=False,
+    )
 
     game_info = match["info"]
     _gv_parts = game_info.get("gameVersion", "0.0").split(".")[:2]
@@ -486,9 +560,9 @@ def main():
     gold_frames_json = json.dumps(gold_frames, ensure_ascii=False)
 
     meta = (
-        f"Mode: {game_info.get('gameMode','')} / "
-        f"Duration: {game_info.get('gameDuration',0)//60}:{game_info.get('gameDuration',0)%60:02d} / "
-        f"Version: {game_info.get('gameVersion','')}"
+        f"Mode: {game_info.get('gameMode','')} / "  # noqa: E501,E231,E228
+        f"Duration: {game_info.get('gameDuration',0)//60}:{game_info.get('gameDuration',0)%60:02d} / "  # noqa: E501,E231,E228
+        f"Version: {game_info.get('gameVersion','')}"  # noqa: E501,E231,E228
     )
 
     used_files = f"match: {match_path.name} / timeline: {timeline_path.name} / champ: ddragon {dd_version}"
@@ -498,31 +572,31 @@ def main():
 <head>
 <meta charset=\"utf-8\"/>
 <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/>
-<title>LoL Match Viewer - {html_escape(match['metadata'].get('matchId',''))}</title>
+<title>LoL Match Viewer - {html_escape(match['metadata'].get('matchId',''))}</title>  # noqa: E501,E231,E228
 <style>
   :root {{ --bg:#0b0f17; --card:#121a2a; --text:#e9eef8; --muted:#9fb0cf; --line:#26334d;
     --blue:#2f7bf6; --red:#ff4d5a; --pill:#1b2740; }}
   html, body {{ margin:0; overflow-x:hidden; }}
-  body {{ font-family: system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans JP\", sans-serif; background:var(--bg); color:var(--text); }}
-  header {{ padding:16px 18px; border-bottom:1px solid var(--line); position:sticky; top:0; width:100%; box-sizing:border-box; background:rgba(11,15,23,.95); backdrop-filter: blur(6px); z-index:10; }}
+  body {{ font-family: system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans JP\", sans-serif; background:var(--bg); color:var(--text); }}  # noqa: E501,E231,E228
+  header {{ padding:16px 18px; border-bottom:1px solid var(--line); position:sticky; top:0; width:100%; box-sizing:border-box; background:rgba(11,15,23,.95); backdrop-filter: blur(6px); z-index:10; }}  # noqa: E501,E231,E228
   header h1 {{ margin:0; font-size:18px; }}
   header .meta {{ margin-top:6px; color:var(--muted); font-size:12px; }}
-  main {{ max-width: 1400px; width:100%; box-sizing:border-box; margin: 0 auto; padding: 16px; display:grid; gap: 12px; }}
+  main {{ max-width: 1400px; width:100%; box-sizing:border-box; margin: 0 auto; padding: 16px; display:grid; gap: 12px; }}  # noqa: E501,E231,E228
   .card {{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding: 12px; }}
   h2 {{ margin: 6px 0 12px; font-size: 15px; }}
   .table-wrap {{ overflow:auto; }}
   table {{ width:100%; border-collapse: collapse; min-width: 860px; }}
-  th, td {{ padding: 8px 10px; border-bottom:1px solid var(--line); text-align:left; font-size: 12px; white-space: nowrap; }}
+  th, td {{ padding: 8px 10px; border-bottom:1px solid var(--line); text-align:left; font-size: 12px; white-space: nowrap; }}  # noqa: E501,E231,E228
   th {{ position: sticky; top: 0; background: #0f1726; z-index: 1; }}
   tr.user td {{ outline: 1px solid rgba(47,123,246,.35); background: rgba(47,123,246,.08); }}
   .toolbar {{ display:flex; flex-wrap:wrap; gap: 8px; align-items:center; }}
-  .toolbar input, .toolbar select {{ background:#0f1726; border:1px solid var(--line); color:var(--text); padding:8px 10px; border-radius:10px; font-size:12px; }}
-  .pill {{ display:inline-flex; gap:6px; align-items:center; padding: 3px 8px; border-radius:999px; background:var(--pill); border:1px solid var(--line); font-size: 11px; color: var(--muted); }}
+  .toolbar input, .toolbar select {{ background:#0f1726; border:1px solid var(--line); color:var(--text); padding:8px 10px; border-radius:10px; font-size:12px; }}  # noqa: E501,E231,E228
+  .pill {{ display:inline-flex; gap:6px; align-items:center; padding: 3px 8px; border-radius:999px; background:var(--pill); border:1px solid var(--line); font-size: 11px; color: var(--muted); }}  # noqa: E501,E231,E228
   .pill .dot {{ width:8px; height:8px; border-radius:999px; background: var(--muted); display:inline-block; }}
   .dot.blue {{ background: var(--blue); }}
   .dot.red {{ background: var(--red); }}
   .events {{ display:grid; gap:6px; margin-top: 10px; }}
-  .event {{ border:1px solid var(--line); border-radius:12px; padding: 10px; display:flex; gap: 10px; align-items:flex-start; background: rgba(255,255,255,0.02); min-width:0; overflow:hidden; }}
+  .event {{ border:1px solid var(--line); border-radius:12px; padding: 10px; display:flex; gap: 10px; align-items:flex-start; background: rgba(255,255,255,0.02); min-width:0; overflow:hidden; }}  # noqa: E501,E231,E228
   .event.friend {{ background: rgba(47,123,246,0.10); }}
   .event.enemy {{ background: rgba(255,77,90,0.10); }}
   .event .time {{ width: 52px; color: var(--muted); font-variant-numeric: tabular-nums; }}
@@ -556,7 +630,7 @@ def main():
     overflow:hidden; text-overflow:ellipsis; }}
   details {{ margin-top: 6px; }}
   details summary {{ cursor:pointer; color: var(--muted); font-size: 12px; }}
-  pre {{ white-space: pre-wrap; word-break: break-word; background:#0f1726; border:1px solid var(--line); padding:10px; border-radius:10px; font-size:11px; color: var(--text); }}
+  pre {{ white-space: pre-wrap; word-break: break-word; background:#0f1726; border:1px solid var(--line); padding:10px; border-radius:10px; font-size:11px; color: var(--text); }}  # noqa: E501,E231,E228
   footer {{ color: var(--muted); font-size: 11px; padding: 0 16px 18px; text-align:center; }}
   #lang-toggle {{ background:var(--pill); border:1px solid var(--line); color:var(--text);
     padding:5px 14px; border-radius:8px; cursor:pointer; font-size:12px; margin-top:8px; }}
@@ -572,7 +646,7 @@ def main():
 </head>
 <body>
 <header>
-  <h1>LoL Match Viewer — {html_escape(match['metadata'].get('matchId',''))}</h1>
+  <h1>LoL Match Viewer — {html_escape(match['metadata'].get('matchId',''))}</h1>  # noqa: E501,E231,E228
   <div class=\"meta\">{html_escape(meta)}</div>
   <div class=\"meta\">{html_escape(used_files)}</div>
   <button id=\"lang-toggle\" onclick=\"toggleLang()\">🌐 EN</button>
@@ -618,7 +692,7 @@ def main():
   <section class=\"card\">
     <h2 data-i18n=\"timeline_title\">時系列イベント（キル / オブジェクト）</h2>
     <div class=\"toolbar\">
-      <input id=\"q\" data-i18n-placeholder=\"search_ph\" placeholder=\"検索: 例) キル / ドラゴン / ワード / ルル など\" style=\"flex:1; min-width: 260px;\">
+      <input id=\"q\" data-i18n-placeholder=\"search_ph\" placeholder=\"検索: 例) キル / ドラゴン / ワード / ルル など\" style=\"flex:1; min-width: 260px;\">  # noqa: E501,E231,E228
       <select id=\"team\">
         <option value=\"\" data-i18n=\"team_all\">Team: 全部</option>
         <option value=\"{friend_team_id}\" data-i18n=\"team_ally\">味方</option>
@@ -827,7 +901,7 @@ function render() {{
     if (team && String(e.teamId) !== team) return false;
     if (type && e.type !== type) return false;
     if (q) {{
-      const hay = (e.time + " " + (e.team||"") + " " + (e.team_en||"") + " " + e.type + " " + e.text + " " + (e.text_en||"")).toLowerCase();
+      const hay = (e.time + " " + (e.team||"") + " " + (e.team_en||"") + " " + e.type + " " + e.text + " " + (e.text_en||"")).toLowerCase();  # noqa: E501,E231,E228
       if (!hay.includes(q)) return false;
     }}
     return true;
@@ -1638,8 +1712,8 @@ render();
 
     OUTPUT_DIR.mkdir(exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d%H%M%S")
-    out_html   = OUTPUT_DIR / f"out_{ts}.html"
-    out_team   = OUTPUT_DIR / f"out_{ts}_team.csv"
+    out_html = OUTPUT_DIR / f"out_{ts}.html"
+    out_team = OUTPUT_DIR / f"out_{ts}_team.csv"
     out_events = OUTPUT_DIR / f"out_{ts}_events.csv"
 
     out_html.write_text(html_doc, encoding="utf-8")
@@ -1647,15 +1721,61 @@ render();
     if not args.no_csv:
         with out_team.open("w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
-            w.writerow(["teamId", "team", "pos", "player", "champ", "kills", "deaths", "assists", "kda", "cs", "gold", "dmg", "vision", "cc", "is_user"])
+            w.writerow(
+                [
+                    "teamId",
+                    "team",
+                    "pos",
+                    "player",
+                    "champ",
+                    "kills",
+                    "deaths",
+                    "assists",
+                    "kda",
+                    "cs",
+                    "gold",
+                    "dmg",
+                    "vision",
+                    "cc",
+                    "is_user",
+                ]
+            )
             for r in team100 + team200:
-                w.writerow([r["teamId"], r["team"], r["pos"], r["player"], r["champ"], r["k"], r["d"], r["a"], f"{r['kda']:.4f}", r["cs"], r["gold"], r["dmg"], r["vision"], r["cc"], int(r["is_user"])])
+                w.writerow(
+                    [
+                        r["teamId"],
+                        r["team"],
+                        r["pos"],
+                        r["player"],
+                        r["champ"],
+                        r["k"],
+                        r["d"],
+                        r["a"],
+                        f"{r['kda']:.4f}",
+                        r["cs"],
+                        r["gold"],
+                        r["dmg"],
+                        r["vision"],
+                        r["cc"],
+                        int(r["is_user"]),
+                    ]
+                )
 
         with out_events.open("w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             w.writerow(["t_ms", "time", "teamId", "team", "type", "text", "raw_json"])
             for e in events:
-                w.writerow([e["t"], e["time"], e["teamId"], e["team"], e["type"], e["text"], json.dumps(e["raw"], ensure_ascii=False)])
+                w.writerow(
+                    [
+                        e["t"],
+                        e["time"],
+                        e["teamId"],
+                        e["team"],
+                        e["type"],
+                        e["text"],
+                        json.dumps(e["raw"], ensure_ascii=False),
+                    ]
+                )
 
     print("wrote:")
     print(" ", out_html)
