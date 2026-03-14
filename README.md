@@ -87,13 +87,13 @@ Copy the `puuid` value into your `.env` file as `PUUID=...`.
 
 ```bash
 # Swift Play (default)
-python src/match.py
+python src/fetch_match_data.py
 
 # Ranked Solo/Duo
-python src/match.py --queue ranked-solo
+python src/fetch_match_data.py --queue ranked-solo
 
 # Ranked Flex
-python src/match.py --queue ranked-flex
+python src/fetch_match_data.py --queue ranked-flex
 ```
 
 Pulls the latest match from the Riot API, saves it to `data/`, and automatically generates the HTML viewer.
@@ -142,7 +142,7 @@ riftviz/
 ├── assets/
 │   └── 00_champ.json            # Champion ID → display name mapping
 ├── src/
-│   ├── match.py                 # Fetch match data from Riot API
+│   ├── fetch_match_data.py      # Fetch match data from Riot API
 │   └── lol_html_viewer_auto.py  # Generate the HTML viewer
 ├── data/                        # Match JSON files (gitignored)
 └── output/                      # Generated HTML / CSV (gitignored)
