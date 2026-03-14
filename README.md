@@ -6,7 +6,7 @@ A local League of Legends match analysis tool that fetches data from the Riot Ga
 
 ## Demo
 
-<img width="1280" alt="Stats tables" src="https://github.com/user-attachments/assets/77f7da20-25b0-43e9-9fa2-6b41f5d9a1b2" />
+<img width="1280" alt="Stats tables" src="https://github.com/user-attachments/assets/1addc6b7-9edd-4d24-8f8d-1c7d9808873b" />
 <img width="1280" alt="KDA Breakdown" src="https://github.com/user-attachments/assets/2f62e7a6-fb82-434a-b0a9-9e5e129534ee" />
 <img width="1280" alt="KDA Ratio / Damage / Gold" src="https://github.com/user-attachments/assets/47bae183-6205-4e90-b4b5-a53cd1b252da" />
 <img width="1280" alt="CS / Vision / CC / Scatter plot" src="https://github.com/user-attachments/assets/cd22b139-afd4-4cf5-98ad-39c855ce9ec9" />
