@@ -509,8 +509,9 @@ def main():
 <style>
   :root {{ --bg:#0b0f17; --card:#121a2a; --text:#e9eef8; --muted:#9fb0cf; --line:#26334d;
     --blue:#2f7bf6; --red:#ff4d5a; --pill:#1b2740; }}
-  body {{ margin:0; font-family: system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans JP\", sans-serif; background:var(--bg); color:var(--text); overflow-x:hidden; }}
-  header {{ padding:16px 18px; border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(11,15,23,.95); backdrop-filter: blur(6px); z-index:10; box-sizing:border-box; }}
+  html, body {{ margin:0; overflow-x:hidden; }}
+  body {{ font-family: system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans JP\", sans-serif; background:var(--bg); color:var(--text); }}
+  header {{ padding:16px 18px; border-bottom:1px solid var(--line); position:sticky; top:0; width:100%; box-sizing:border-box; background:rgba(11,15,23,.95); backdrop-filter: blur(6px); z-index:10; }}
   header h1 {{ margin:0; font-size:18px; }}
   header .meta {{ margin-top:6px; color:var(--muted); font-size:12px; }}
   main {{ max-width: 1400px; width:100%; box-sizing:border-box; margin: 0 auto; padding: 16px; display:grid; gap: 12px; }}
@@ -528,7 +529,7 @@ def main():
   .dot.blue {{ background: var(--blue); }}
   .dot.red {{ background: var(--red); }}
   .events {{ display:grid; gap:6px; margin-top: 10px; }}
-  .event {{ border:1px solid var(--line); border-radius:12px; padding: 10px; display:flex; gap: 10px; align-items:flex-start; background: rgba(255,255,255,0.02); }}
+  .event {{ border:1px solid var(--line); border-radius:12px; padding: 10px; display:flex; gap: 10px; align-items:flex-start; background: rgba(255,255,255,0.02); min-width:0; overflow:hidden; }}
   .event.friend {{ background: rgba(47,123,246,0.10); }}
   .event.enemy {{ background: rgba(255,77,90,0.10); }}
   .event .time {{ width: 52px; color: var(--muted); font-variant-numeric: tabular-nums; }}
@@ -541,7 +542,7 @@ def main():
   /* ── ビジュアルイベント行 ─────────────────────────────────────── */
   .ev-row {{ display:flex; align-items:center; gap:8px; padding:6px 10px;
     border-radius:12px; border:1px solid var(--line);
-    background:rgba(255,255,255,0.02); }}
+    background:rgba(255,255,255,0.02); min-width:0; overflow:hidden; }}
   .ev-row.friend {{ background:rgba(47,123,246,0.08); }}
   .ev-row.enemy  {{ background:rgba(255,77,90,0.08); }}
   .ev-row.user-event {{ outline:2px solid #f0c040; background:rgba(240,192,64,0.10) !important; }}
@@ -567,8 +568,10 @@ def main():
   #lang-toggle {{ background:var(--pill); border:1px solid var(--line); color:var(--text);
     padding:5px 14px; border-radius:8px; cursor:pointer; font-size:12px; margin-top:8px; }}
   #lang-toggle:hover {{ background:var(--blue); color:#fff; }}
-  .charts-wrap {{ display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:12px; }}
+  .charts-wrap {{ display:grid; grid-template-columns:repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap:12px; }}
+  .charts-wrap > .card {{ min-width:0; }}
   .charts-wrap > .card.chart-full {{ grid-column:1/-1; }}
+  .radar-wrap {{ grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr; gap:12px; }}
   .chart-label {{ margin:0 0 10px; font-size:14px; font-weight:600;
     letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }}
   canvas {{ display:block; }}
@@ -603,14 +606,18 @@ def main():
       <canvas id=\"chart-cc\"></canvas></section>
     <section class=\"card chart-full\"><p class=\"chart-label\" data-i18n=\"chart_scatter\">与ダメ / 被ダメ 分布</p>
       <canvas id=\"chart-scatter\"></canvas></section>
-    <section class=\"card\"><p class=\"chart-label\" data-i18n=\"chart_radar_ally\">味方チーム — パフォーマンス</p>
-      <canvas id=\"chart-radar-friend\"></canvas></section>
-    <section class=\"card\"><p class=\"chart-label\" data-i18n=\"chart_radar_enemy\">敵チーム — パフォーマンス</p>
-      <canvas id=\"chart-radar-enemy\"></canvas></section>
-    <section class=\"card\"><p class=\"chart-label\" data-i18n=\"chart_kp\">キルへの関与率（KP%）</p>
-      <canvas id=\"chart-kp\"></canvas></section>
-    <section class=\"card\"><p class=\"chart-label\" data-i18n=\"chart_dead\">デス時間（試合時間比% ／ 低いほど良）</p>
-      <canvas id=\"chart-dead\"></canvas></section>
+    <div class=\"radar-wrap\">
+      <section class=\"card\"><p class=\"chart-label\" data-i18n=\"chart_radar_ally\">味方チーム — パフォーマンス</p>
+        <canvas id=\"chart-radar-friend\"></canvas></section>
+      <section class=\"card\"><p class=\"chart-label\" data-i18n=\"chart_radar_enemy\">敵チーム — パフォーマンス</p>
+        <canvas id=\"chart-radar-enemy\"></canvas></section>
+    </div>
+    <div class=\"radar-wrap\">
+      <section class=\"card\"><p class=\"chart-label\" data-i18n=\"chart_kp\">キルへの関与率（KP%）</p>
+        <canvas id=\"chart-kp\"></canvas></section>
+      <section class=\"card\"><p class=\"chart-label\" data-i18n=\"chart_dead\">デス時間（試合時間比% ／ 低いほど良）</p>
+        <canvas id=\"chart-dead\"></canvas></section>
+    </div>
     <section class=\"card chart-full\"><p class=\"chart-label\" data-i18n=\"chart_gold_diff\">チームゴールドリード 推移</p>
       <canvas id=\"chart-gold-diff\"></canvas></section>
   </div>
