@@ -4,6 +4,17 @@ A local League of Legends match analysis tool that fetches data from the Riot Ga
 
 ---
 
+## Demo
+
+<img width="1280" alt="Stats tables and KDA Breakdown" src="https://github.com/user-attachments/assets/ffded0fb-e692-4112-b331-7baec0be5b92" />
+<img width="1280" alt="KDA Ratio / Damage / Gold charts" src="https://github.com/user-attachments/assets/0c3092f2-94df-4532-bc18-e9e6672710e3" />
+<img width="1280" alt="CS / Vision / CC / Scatter plot" src="https://github.com/user-attachments/assets/4cd5ca11-8724-4e39-820f-6ad18c0dba48" />
+<img width="1280" alt="Performance radar / KP / Dead Time" src="https://github.com/user-attachments/assets/43075911-bc24-47ee-8492-4a8533d27f31" />
+<img width="1280" alt="Gold diff timeline" src="https://github.com/user-attachments/assets/dcf55ded-3c6b-4c7a-8976-d4dc8f7ae65d" />
+<img width="1280" alt="Event timeline" src="https://github.com/user-attachments/assets/9dfccf4f-fa4d-48d3-a169-4bfeb5217f3e" />
+
+---
+
 ## Features
 
 **Stats Charts (Canvas)**
@@ -141,8 +152,7 @@ riftviz/
 ├── build_viewer.bat             # Windows shortcut for HTML generation
 ├── src/
 │   ├── fetch_match_data.py      # Fetch match data from Riot API
-│   ├── lol_html_viewer_auto.py  # Generate the HTML viewer
-│   └── make_demo.py             # Generate demo HTML with anonymized names
+│   └── lol_html_viewer_auto.py  # Generate the HTML viewer
 ├── data/                        # Match JSON files (gitignored)
 └── output/                      # Generated HTML / CSV (gitignored)
 ```
