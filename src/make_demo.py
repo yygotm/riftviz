@@ -86,12 +86,32 @@ DEMO_ID = f"{PLATFORM}_000000000"
 match_demo = copy.deepcopy(match_data)
 participants = match_demo["info"]["participants"]
 
+USER_PUUID = _env.get("PUUID", "")
+
+# Determine which teamId the real user belongs to (for ally detection)
+_real_user_team = next(
+    (p.get("teamId", 100) for p in participants if p.get("puuid") == USER_PUUID),
+    100  # fallback to team 100
+)
+
 for i, p in enumerate(participants):
     name, tag = FAKE_NAMES[i % len(FAKE_NAMES)]
     p["riotIdGameName"] = name
     p["riotIdTagline"]  = tag
     p["summonerName"]   = name
-    # Preserve puuid (needed for ally/enemy detection — stays local, not in output HTML)
+    # PUUIDs are anonymised below — do not leak real PUUIDs into demo HTML
+    p["puuid"] = f"DEMO_PUUID_{i}"
+
+# Make ally Jinx the "user" in the demo so the golden highlight is visible.
+# Pick the first Jinx on the same team as the real user (fallback: any Jinx).
+DEMO_USER_PUUID = "DEMO_USER_PUUID"
+_jinx = next(
+    (p for p in participants
+     if p.get("championName") == "Jinx" and p.get("teamId") == _real_user_team),
+    next((p for p in participants if p.get("championName") == "Jinx"), None)
+)
+if _jinx:
+    _jinx["puuid"] = DEMO_USER_PUUID
 
 # Replace identifying metadata
 match_demo["metadata"]["matchId"]  = DEMO_ID
@@ -110,6 +130,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
 
     # Run viewer (suppressing organize_all_outputs to avoid archiving current output)
     import lol_html_viewer_auto
+    lol_html_viewer_auto.USER_PUUID = DEMO_USER_PUUID  # ally Jinx as the demo user
     sys.argv = ["lol_html_viewer_auto.py", "--dir", str(tmp), "--no-csv", "--lang", "en"]
 
     # Capture the output file path by monkey-patching OUTPUT_DIR temporarily
