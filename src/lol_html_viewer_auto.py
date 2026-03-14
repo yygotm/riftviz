@@ -58,7 +58,7 @@ _env       = load_env(ROOT / ".env")
 USER_PUUID = _env.get("PUUID", "")
 PLATFORM   = _env.get("PLATFORM", "JP1").upper()
 if PLATFORM not in PLATFORM_TO_REGION:
-    print(f"[WARN] 不明な PLATFORM '{PLATFORM}' — JP1 にフォールバック")
+    print(f"[WARN] Unknown PLATFORM '{PLATFORM}' — falling back to JP1")
     PLATFORM = "JP1"
 
 MATCH_RE = re.compile(rf"^{re.escape(PLATFORM)}_(\d+)\.json$")
@@ -117,7 +117,7 @@ def pick_latest_pair(base_dir: Path) -> tuple[Path, Path]:
 
     match_candidates = [p for p in files if MATCH_RE.match(p.name)]
     if not match_candidates:
-        raise FileNotFoundError(f"match が見つからない: {base_dir}/{PLATFORM}_\\d+.json")
+        raise FileNotFoundError(f"No match JSON found: {base_dir}/{PLATFORM}_\\d+.json")
 
     match_path = max(match_candidates, key=lambda p: p.stat().st_mtime)
     game_id = MATCH_RE.match(match_path.name).group(1)
@@ -128,10 +128,10 @@ def pick_latest_pair(base_dir: Path) -> tuple[Path, Path]:
 
     tl_candidates = [p for p in files if TL_RE.match(p.name)]
     if not tl_candidates:
-        raise FileNotFoundError(f"timeline が見つからない: {base_dir}/{PLATFORM}_\\d+_timeline.json")
+        raise FileNotFoundError(f"No timeline JSON found: {base_dir}/{PLATFORM}_\\d+_timeline.json")
 
     fallback = max(tl_candidates, key=lambda p: p.stat().st_mtime)
-    print(f"[WARN] 対応する timeline が見つからないため、最新 timeline を採用: {fallback.name}")
+    print(f"[WARN] Matching timeline not found — using latest available: {fallback.name}")
     return match_path, fallback
 
 

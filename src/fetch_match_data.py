@@ -69,11 +69,11 @@ PUUID    = _env.get("PUUID", "")
 REGION   = PLATFORM_TO_REGION.get(PLATFORM, "asia")
 
 if not API_KEY:
-    raise RuntimeError("❌ .env に API_KEY がありません。.env を KEY=VALUE 形式で設定してください")
+    raise RuntimeError("❌ API_KEY not found in .env — set it in KEY=VALUE format")
 if not PUUID:
-    raise RuntimeError("❌ .env に PUUID がありません。.env に PUUID=your-puuid-here を追加してください")
+    raise RuntimeError("❌ PUUID not found in .env — add PUUID=your-puuid-here")
 if PLATFORM not in PLATFORM_TO_REGION:
-    print(f"[WARN] 不明な PLATFORM '{PLATFORM}' — asia にフォールバック")
+    print(f"[WARN] Unknown PLATFORM '{PLATFORM}' — falling back to asia")
 
 HEADERS = {"X-Riot-Token": API_KEY}
 
