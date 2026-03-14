@@ -407,6 +407,7 @@ def main():
 
     def table_html(rows, title_key, team_id):
         title_ja = "味方チーム" if title_key == "ally_team" else "敵チーム"
+        title_en = "Ally Team" if title_key == "ally_team" else "Enemy Team"
         head = ["POS", "Player", "Champion", "K/D/A", "KDA", "CS", "Gold", "DMG", "Vision", "CC"]
         trs = []
         for r in rows:
@@ -694,13 +695,7 @@ function applyLang(lang) {{
   currentLang = lang;
   document.querySelectorAll('[data-i18n]').forEach(el => {{
     const key = el.getAttribute('data-i18n');
-    const teamId = el.getAttribute('data-i18n-team');
-    if (teamId !== null) {{
-      const suffix = lang === 'ja' ? ` — 一覧（team ${{teamId}}）` : ` — team ${{teamId}}`;
-      el.textContent = t(key) + suffix;
-    }} else {{
-      el.textContent = t(key);
-    }}
+    el.textContent = t(key);
   }});
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {{
     el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
