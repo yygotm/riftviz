@@ -2,18 +2,9 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=C0302,R0912,R0914,R0915,C0103,W0603,R0801
 """
-LoL match + timeline JSON から
-- 味方/敵の一覧表（基本スタッツ）
-- 時系列イベントビュー（キル / オブジェクト / ワードのみ・日本語）
-を1枚HTMLに出力する（+ CSVも出力）。
-
-今回の改修内容:
-- タイムラインイベントは以下のみ採用
-  * CHAMPION_KILL
-  * ELITE_MONSTER_KILL
-  * BUILDING_KILL
-- イベント文言を日本語で簡潔化（例: "02:44 オラフがガレンをキル"）
-- killerId / victimId / creatorId が 0 や None で participant を引けないケースを安全に処理（"不明"）
+LoL match + timeline JSON → HTML viewer + CSV.
+Outputs ally/enemy stats table and timeline events (kills / objectives).
+No external assets — fully self-contained dark-theme HTML.
 """
 
 import argparse
@@ -34,23 +25,6 @@ DATA_DIR = ROOT / "data"
 OUTPUT_DIR = ROOT / "output"
 ASSETS_DIR = ROOT / "assets"
 
-
-# ===== .env パーサー =====
-def load_env(path):
-    env = {}
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                key, _, val = line.partition("=")
-                env[key.strip()] = val.strip()
-    except FileNotFoundError:
-        pass
-    return env
-
-
 PLATFORM_TO_REGION = {
     "BR1": "americas",
     "LA1": "americas",
@@ -70,6 +44,33 @@ PLATFORM_TO_REGION = {
     "VN2": "sea",
 }
 
+ALLOWED_EVENT_TYPES = {
+    "CHAMPION_KILL",
+    "ELITE_MONSTER_KILL",
+    "BUILDING_KILL",
+}
+
+
+# ===== .env パーサー =====
+def load_env(path):
+    env = {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, val = line.partition("=")
+                env[key.strip()] = val.strip()
+    except FileNotFoundError:
+        pass
+    return env
+
+
+def load_json(p: Path):
+    return json.load(p.open("r", encoding="utf-8"))
+
+
 _env = load_env(ROOT / ".env")
 USER_PUUID = _env.get("PUUID", "")
 PLATFORM = _env.get("PLATFORM", "JP1").upper()
@@ -88,11 +89,35 @@ if PLATFORM not in PLATFORM_TO_REGION:
 MATCH_RE = re.compile(rf"^{re.escape(PLATFORM)}_(\d+)\.json$")
 TL_RE = re.compile(rf"^{re.escape(PLATFORM)}_(\d+)_timeline\.json$")
 
-ALLOWED_EVENT_TYPES = {
-    "CHAMPION_KILL",
-    "ELITE_MONSTER_KILL",
-    "BUILDING_KILL",
-}
+
+def pick_latest_pair(base_dir: Path) -> tuple[Path, Path]:
+    r"""同フォルダの中の最新の JP1_\d+.json を match として採用し、対応timelineを探す。"""
+    files = [p for p in base_dir.iterdir() if p.is_file()]
+
+    match_candidates = [p for p in files if MATCH_RE.match(p.name)]
+    if not match_candidates:
+        raise FileNotFoundError(f"No match JSON found: {base_dir}/{PLATFORM}_\\d+.json")
+
+    match_path = max(match_candidates, key=lambda p: p.stat().st_mtime)
+    game_id = MATCH_RE.match(match_path.name).group(1)
+
+    timeline_path = base_dir / f"{PLATFORM}_{game_id}_timeline.json"
+    if timeline_path.exists():
+        return match_path, timeline_path
+
+    tl_candidates = [p for p in files if TL_RE.match(p.name)]
+    if not tl_candidates:
+        raise FileNotFoundError(
+            f"No timeline JSON found: {base_dir}/{PLATFORM}_\\d+_timeline.json"
+        )
+
+    fallback = max(tl_candidates, key=lambda p: p.stat().st_mtime)
+    print(
+        f"[WARN] 対応する timeline が見つかりません — 最新を使用: {fallback.name}"
+        if _LANG == "ja"
+        else f"[WARN] Matching timeline not found — using latest available: {fallback.name}"
+    )
+    return match_path, fallback
 
 
 def organize_all_outputs():
@@ -133,75 +158,10 @@ def fmt_time(ms: int) -> str:
     return f"{s // 60:02d}:{s % 60:02d}"
 
 
-def load_json(p: Path):
-    return json.load(p.open("r", encoding="utf-8"))
-
-
-def pick_latest_pair(base_dir: Path) -> tuple[Path, Path]:
-    r"""同フォルダの中の最新の JP1_\d+.json を match として採用し、対応timelineを探す。"""
-    files = [p for p in base_dir.iterdir() if p.is_file()]
-
-    match_candidates = [p for p in files if MATCH_RE.match(p.name)]
-    if not match_candidates:
-        raise FileNotFoundError(f"No match JSON found: {base_dir}/{PLATFORM}_\\d+.json")
-
-    match_path = max(match_candidates, key=lambda p: p.stat().st_mtime)
-    game_id = MATCH_RE.match(match_path.name).group(1)
-
-    timeline_path = base_dir / f"{PLATFORM}_{game_id}_timeline.json"
-    if timeline_path.exists():
-        return match_path, timeline_path
-
-    tl_candidates = [p for p in files if TL_RE.match(p.name)]
-    if not tl_candidates:
-        raise FileNotFoundError(
-            f"No timeline JSON found: {base_dir}/{PLATFORM}_\\d+_timeline.json"
-        )
-
-    fallback = max(tl_candidates, key=lambda p: p.stat().st_mtime)
-    print(
-        f"[WARN] 対応する timeline が見つかりません — 最新を使用: {fallback.name}"
-        if _LANG == "ja"
-        else f"[WARN] Matching timeline not found — using latest available: {fallback.name}"
-    )
-    return match_path, fallback
-
-
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument(
-        "--dir",
-        default=str(DATA_DIR),
-        help="JSONが置いてあるディレクトリ（デフォルト: data/）",
-    )
-    ap.add_argument("--no-csv", action="store_true", help="CSVを出さない（HTMLのみ）")
-    ap.add_argument(
-        "--lang",
-        default="ja",
-        choices=["ja", "en"],
-        help="Champion name language for the table (default: ja)",
-    )
-    args = ap.parse_args()
-
-    # --lang overrides the .env LANG for console messages inside main()
-    global _LANG
-    _LANG = args.lang
-
-    base_dir = Path(args.dir).expanduser().resolve()
-
-    match_path, timeline_path = pick_latest_pair(base_dir)
-
-    match = load_json(match_path)
-    timeline = load_json(timeline_path)
-
-    # ── チャンプ名を Data Dragon から取得 ──────────────────────────────────────
-    gv_parts = match["info"].get("gameVersion", "0.0").split(".")[:2]
-    dd_version = ".".join(gv_parts) + ".1"
-    dd_locale = "en_US" if args.lang == "en" else "ja_JP"
-    champ_map = {}
+def fetch_champ_map(dd_version: str, dd_locale: str) -> dict:
+    url = f"https://ddragon.leagueoflegends.com/cdn/{dd_version}/data/{dd_locale}/champion.json"
     try:
-        dd_url = f"https://ddragon.leagueoflegends.com/cdn/{dd_version}/data/{dd_locale}/champion.json"
-        with urllib.request.urlopen(dd_url, timeout=10) as r:
+        with urllib.request.urlopen(url, timeout=10) as r:
             dd_data = json.loads(r.read().decode("utf-8"))
         champ_map = {v["key"]: v["name"] for v in dd_data["data"].values()}
         print(
@@ -209,293 +169,269 @@ def main():
             if _LANG == "ja"
             else f"[champ] Fetched {len(champ_map)} champions from Data Dragon {dd_version} ({dd_locale})"
         )
+        return champ_map
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(
             f"[WARN] Data Dragon の取得に失敗 ({e}) — チャンプ名は ID:xxx で表示されます"
             if _LANG == "ja"
             else f"[WARN] Data Dragon fetch failed ({e}) — champion names will show as ID:xxx"
         )
+        return {}
 
-    def champ_name(champ_id: int) -> str:
-        return champ_map.get(str(champ_id), f"ID:{champ_id}")
 
-    participants = match["info"]["participants"]
-    pid2p = {p["participantId"]: p for p in participants}
+class MatchContext:
+    """Match state: participant lookup, event text, and row building."""
 
-    user_pid = None
-    user_team_id = None
-    for p in participants:
-        if p.get("puuid") == USER_PUUID:
-            user_pid = p["participantId"]
-            user_team_id = p.get("teamId")
-            break
+    def __init__(self, match: dict, champ_map: dict, user_puuid: str):
+        self.participants = match["info"]["participants"]
+        self.pid2p = {p["participantId"]: p for p in self.participants}
+        self.champ_map = champ_map
 
-    # 念のため: ユーザーが見つからない場合は teamId=100 を味方として扱う
-    if user_team_id not in (100, 200):
-        user_team_id = 100
+        # Identify the user's participant and team
+        self.user_pid: int | None = None
+        self.user_team_id: int = 100
+        for p in self.participants:
+            if p.get("puuid") == user_puuid:
+                self.user_pid = p["participantId"]
+                self.user_team_id = p.get("teamId", 100)
+                break
+        if self.user_team_id not in (100, 200):
+            self.user_team_id = 100
 
-    def display_name(p):
+        self.friend_team_id = self.user_team_id
+        self.enemy_team_id = 200 if self.friend_team_id == 100 else 100
+
+    # ── Lookup helpers ────────────────────────────────────────────────────
+
+    def champ_name(self, champ_id: int) -> str:
+        return self.champ_map.get(str(champ_id), f"ID:{champ_id}")
+
+    def get_p(self, pid) -> dict | None:
+        """Safe participant lookup (timeline events may have 0 / None)."""
+        if not isinstance(pid, int) or pid <= 0:
+            return None
+        return self.pid2p.get(pid)
+
+    def champ_from_pid(self, pid, lang: str = "ja") -> str:
+        p = self.get_p(pid)
+        if not p:
+            return "不明" if lang == "ja" else "Unknown"
+        if lang == "en":
+            return p.get("championName") or self.champ_name(p.get("championId"))
+        return self.champ_name(p.get("championId"))
+
+    @staticmethod
+    def display_name(p: dict) -> str:
         gn = p.get("riotIdGameName") or ""
         tl = p.get("riotIdTagline") or ""
         if gn and tl:
             return f"{gn}#{tl}"
         return p.get("summonerName") or gn or f"PID:{p.get('participantId')}"
 
-    def team_label(team_id: int) -> str:
-        if team_id == user_team_id:
-            return "味方"
+    def team_label(self, team_id: int, lang: str = "ja") -> str:
+        if team_id == self.user_team_id:
+            return "味方" if lang == "ja" else "Ally"
         if team_id in (100, 200):
-            return "敵"
+            return "敵" if lang == "ja" else "Enemy"
         return ""
 
-    def row_for(p):
-        k, d, a = p.get("kills", 0), p.get("deaths", 0), p.get("assists", 0)
-        cs = (p.get("totalMinionsKilled", 0) or 0) + (
-            p.get("neutralMinionsKilled", 0) or 0
-        )
-        dmg = p.get("totalDamageDealtToChampions", 0) or 0
-        taken = p.get("totalDamageTaken", 0) or 0
-        gold = p.get("goldEarned", 0) or 0
-        vs = p.get("visionScore", 0) or 0
-        cc = p.get("timeCCingOthers", 0) or 0
-        pos = p.get("teamPosition") or p.get("individualPosition") or ""
-        champ_en = p.get("championName", "")
-        kp = p.get("challenges", {}).get("killParticipation", 0) or 0
-        dead_s = p.get("totalTimeSpentDead", 0) or 0
+    # ── Event text ────────────────────────────────────────────────────────
+
+    def event_text(self, ev: dict, lang: str = "ja") -> str:
+        """Return a human-readable description of a timeline event."""
+        ev_type = ev.get("type", "")
+
+        if ev_type == "CHAMPION_KILL":
+            killer = self.champ_from_pid(ev.get("killerId"), lang)
+            victim = self.champ_from_pid(ev.get("victimId"), lang)
+            return f"⚔️ {killer}が{victim}をキル" if lang == "ja" else f"⚔️ {killer} killed {victim}"
+
+        if ev_type == "ELITE_MONSTER_KILL":
+            return self._elite_monster_text(ev, lang)
+
+        if ev_type == "BUILDING_KILL":
+            return self._building_text(ev, lang)
+
+        return ""
+
+    def _elite_monster_text(self, ev: dict, lang: str) -> str:
+        killer = self.champ_from_pid(ev.get("killerId"), lang)
+        monster = ev.get("monsterType", "")
+        sub = ev.get("monsterSubType", "")
+        icon = "🐉" if monster == "DRAGON" else "👑"
+
+        if lang == "ja":
+            name_map = {"DRAGON": "ドラゴン", "BARON_NASHOR": "バロン", "RIFTHERALD": "リフトヘラルド"}
+            m = name_map.get(monster, monster or "オブジェクト")
+            if sub:
+                m = f"{m}（{sub}）"
+            return f"{icon} {killer}が{m}を討伐"
+        else:
+            name_map = {"DRAGON": "Dragon", "BARON_NASHOR": "Baron Nashor", "RIFTHERALD": "Rift Herald"}
+            m = name_map.get(monster, monster or "Monster")
+            if sub:
+                m = f"{m} ({sub})"
+            return f"{icon} {killer} slew {m}"
+
+    def _building_text(self, ev: dict, lang: str) -> str:
+        killer = self.champ_from_pid(ev.get("killerId"), lang)
+        building = ev.get("buildingType", "")
+        lane = ev.get("laneType", "")
+
+        if building == "TOWER_BUILDING":
+            icon, b_ja, b_en = "🏰", "タワー", "Tower"
+        elif building == "INHIBITOR_BUILDING":
+            icon, b_ja, b_en = "💎", "インヒビター", "Inhibitor"
+        else:
+            icon, b_ja, b_en = "🏗️", building or "建物", building or "Building"
+
+        if lang == "ja":
+            lane_map = {"TOP_LANE": "トップ", "MID_LANE": "ミッド", "BOT_LANE": "ボット"}
+            lane_label = lane_map.get(lane, "")
+            suffix = f"（{lane_label}）" if lane_label else ""
+            return f"{icon} {killer}が{b_ja}{suffix}を破壊"
+        else:
+            lane_map = {"TOP_LANE": "Top", "MID_LANE": "Mid", "BOT_LANE": "Bot"}
+            lane_label = lane_map.get(lane, "")
+            suffix = f" ({lane_label})" if lane_label else ""
+            return f"{icon} {killer} destroyed {b_en}{suffix}"
+
+    # ── Data builders ─────────────────────────────────────────────────────
+
+    def build_player_row(self, p: dict) -> dict:
+        """Build one player stats row dict."""
+        k = p.get("kills", 0)
+        d = p.get("deaths", 0)
+        a = p.get("assists", 0)
+        cs = (p.get("totalMinionsKilled", 0) or 0) + (p.get("neutralMinionsKilled", 0) or 0)
         return {
             "teamId": p.get("teamId"),
-            "team": team_label(p.get("teamId")),
-            "pos": pos,
-            "player": display_name(p),
-            "champ": champ_name(p.get("championId")),
-            "champName": champ_en,
+            "team": self.team_label(p.get("teamId")),
+            "pos": p.get("teamPosition") or p.get("individualPosition") or "",
+            "player": self.display_name(p),
+            "champ": self.champ_name(p.get("championId")),
+            "champName": p.get("championName", ""),
             "pid": p.get("participantId"),
             "k": k,
             "d": d,
             "a": a,
             "kda": (k + a) / max(1, d),
             "cs": cs,
-            "gold": gold,
-            "dmg": dmg,
-            "taken": taken,
-            "vision": vs,
-            "cc": cc,
-            "kp": kp,
-            "dead_s": dead_s,
-            "is_user": (p.get("participantId") == user_pid),
+            "gold": p.get("goldEarned", 0) or 0,
+            "dmg": p.get("totalDamageDealtToChampions", 0) or 0,
+            "taken": p.get("totalDamageTaken", 0) or 0,
+            "vision": p.get("visionScore", 0) or 0,
+            "cc": p.get("timeCCingOthers", 0) or 0,
+            "kp": p.get("challenges", {}).get("killParticipation", 0) or 0,
+            "dead_s": p.get("totalTimeSpentDead", 0) or 0,
+            "is_user": (p.get("participantId") == self.user_pid),
         }
 
-    team100 = [row_for(p) for p in participants if p.get("teamId") == 100]
-    team200 = [row_for(p) for p in participants if p.get("teamId") == 200]
+    def build_all_rows(self) -> tuple[list, list, list, list]:
+        """Return (team100, team200, friend_rows, enemy_rows)."""
+        team100 = [self.build_player_row(p) for p in self.participants if p.get("teamId") == 100]
+        team200 = [self.build_player_row(p) for p in self.participants if p.get("teamId") == 200]
+        friend_rows = team100 if self.friend_team_id == 100 else team200
+        enemy_rows = team200 if self.friend_team_id == 100 else team100
+        return team100, team200, friend_rows, enemy_rows
 
-    # ユーザー基準で味方/敵を振り分け
-    friend_team_id = user_team_id
-    enemy_team_id = 200 if friend_team_id == 100 else 100
-    friend_rows = team100 if friend_team_id == 100 else team200
-    enemy_rows = team200 if friend_team_id == 100 else team100
-
-    def get_p(pid):
-        # timelineイベントには 0 / None が入ることがあるので安全に
-        if not isinstance(pid, int) or pid <= 0:
-            return None
-        return pid2p.get(pid)
-
-    def champ_from_pid(pid) -> str:
-        p = get_p(pid)
-        if not p:
-            return "不明"
-        return champ_name(p.get("championId"))
-
-    def champ_from_pid_en(pid) -> str:
-        p = get_p(pid)
-        if not p:
-            return "Unknown"
-        return p.get("championName") or champ_name(p.get("championId"))
-
-    def event_to_text_en(ev):
-        t = ev.get("type", "")
-
-        if t == "CHAMPION_KILL":
-            killer = champ_from_pid_en(ev.get("killerId"))
-            victim = champ_from_pid_en(ev.get("victimId"))
-            return f"⚔️ {killer} killed {victim}"
-
-        if t == "ELITE_MONSTER_KILL":
-            killer = champ_from_pid_en(ev.get("killerId"))
-            monster = ev.get("monsterType", "")
-            sub = ev.get("monsterSubType", "")
-            name_map = {
-                "DRAGON": "Dragon",
-                "BARON_NASHOR": "Baron Nashor",
-                "RIFTHERALD": "Rift Herald",
-            }
-            m = name_map.get(monster, monster or "Monster")
-            if sub:
-                m = f"{m} ({sub})"
-            icon = "🐉" if monster == "DRAGON" else "👑"
-            return f"{icon} {killer} slew {m}"
-
-        if t == "BUILDING_KILL":
-            killer = champ_from_pid_en(ev.get("killerId"))
-            building = ev.get("buildingType", "")
-            lane = ev.get("laneType", "")
-            if building == "TOWER_BUILDING":
-                icon = "🏰"
-                b = "Tower"
-            elif building == "INHIBITOR_BUILDING":
-                icon = "💎"
-                b = "Inhibitor"
-            else:
-                icon = "🏗️"
-                b = building or "Building"
-            lane_map = {
-                "TOP_LANE": "Top",
-                "MID_LANE": "Mid",
-                "BOT_LANE": "Bot",
-            }
-            lane_label = lane_map.get(lane, "")
-            suffix = f" ({lane_label})" if lane_label else ""
-            return f"{icon} {killer} destroyed {b}{suffix}"
-
-        return ""
-
-    def event_to_text(ev):
-        t = ev.get("type", "")
-
-        if t == "CHAMPION_KILL":
-            killer = champ_from_pid(ev.get("killerId"))
-            victim = champ_from_pid(ev.get("victimId"))
-            return f"⚔️ {killer}が{victim}をキル"
-
-        if t == "ELITE_MONSTER_KILL":
-            killer = champ_from_pid(ev.get("killerId"))
-            monster = ev.get("monsterType", "")
-            sub = ev.get("monsterSubType", "")
-
-            name_map = {
-                "DRAGON": "ドラゴン",
-                "BARON_NASHOR": "バロン",
-                "RIFTHERALD": "リフトヘラルド",
-            }
-            m = name_map.get(monster, monster or "オブジェクト")
-            if sub:
-                m = f"{m}（{sub}）"
-
-            icon = "🐉" if monster == "DRAGON" else "👑"
-            return f"{icon} {killer}が{m}を討伐"
-
-        if t == "BUILDING_KILL":
-            killer = champ_from_pid(ev.get("killerId"))
-            building = ev.get("buildingType", "")
-            lane = ev.get("laneType", "")
-
-            if building == "TOWER_BUILDING":
-                icon = "🏰"
-                b = "タワー"
-            elif building == "INHIBITOR_BUILDING":
-                icon = "💎"
-                b = "インヒビター"
-            else:
-                icon = "🏗️"
-                b = building or "建物"
-
-            lane_map = {
-                "TOP_LANE": "トップ",
-                "MID_LANE": "ミッド",
-                "BOT_LANE": "ボット",
-            }
-            lane_label = lane_map.get(lane, "")
-            suffix = f"（{lane_label}）" if lane_label else ""
-            return f"{icon} {killer}が{b}{suffix}を破壊"
-
-        return ""
-
-    events = []
-    for frame in timeline["info"]["frames"]:
-        for ev in frame.get("events", []) or []:
-            if ev.get("type") not in ALLOWED_EVENT_TYPES:
-                continue
-
-            ts = ev.get("timestamp", 0) or 0
-
-            # どっちチームのイベントか（killer/creator/victimなどから引ける範囲で）
-            teamId = None
-            for pid_key in ("participantId", "killerId", "creatorId", "victimId"):
-                pid = ev.get(pid_key)
-                p = get_p(pid)
-                if p:
-                    teamId = p.get("teamId")
-                    break
-
-            user_involved = user_pid is not None and user_pid in [
-                ev.get("killerId"),
-                ev.get("victimId"),
-                ev.get("creatorId"),
-                ev.get("participantId"),
-            ]
-
-            events.append(
-                {
+    def build_events(self, timeline: dict, lang: str = "ja") -> list:
+        """Parse timeline frames and return filtered, sorted event list."""
+        events = []
+        for frame in timeline["info"]["frames"]:
+            for ev in frame.get("events", []) or []:
+                if ev.get("type") not in ALLOWED_EVENT_TYPES:
+                    continue
+                ts = ev.get("timestamp", 0) or 0
+                team_id = self._event_team_id(ev)
+                user_involved = self.user_pid is not None and self.user_pid in [
+                    ev.get("killerId"), ev.get("victimId"),
+                    ev.get("creatorId"), ev.get("participantId"),
+                ]
+                text_ja = self.event_text(ev, "ja")
+                text_en = self.event_text(ev, "en")
+                if not text_ja:
+                    continue
+                events.append({
                     "t": ts,
                     "time": fmt_time(ts),
                     "type": ev.get("type", ""),
-                    "teamId": teamId,
-                    "team": (
-                        "味方"
-                        if teamId == user_team_id
-                        else ("敵" if teamId in (100, 200) else "")
-                    ),
-                    "team_en": (
-                        "Ally"
-                        if teamId == user_team_id
-                        else ("Enemy" if teamId in (100, 200) else "")
-                    ),
-                    "text": event_to_text(ev),
-                    "text_en": event_to_text_en(ev),
+                    "teamId": team_id,
+                    "team": self.team_label(team_id, "ja") if team_id else "",
+                    "team_en": self.team_label(team_id, "en") if team_id else "",
+                    "text": text_ja,
+                    "text_en": text_en,
                     "is_user": user_involved,
                     "raw": ev,
-                }
+                })
+        events.sort(key=lambda x: x["t"])
+        return events
+
+    def _event_team_id(self, ev: dict) -> int | None:
+        """Determine which team an event belongs to."""
+        for pid_key in ("participantId", "killerId", "creatorId", "victimId"):
+            p = self.get_p(ev.get(pid_key))
+            if p:
+                return p.get("teamId")
+        return None
+
+    def build_gold_frames(self, timeline: dict) -> list:
+        """Extract per-frame team gold differential for the gold lead chart."""
+        pid_to_team = {p["participantId"]: p["teamId"] for p in self.participants}
+        gold_frames = []
+        for frame in timeline["info"].get("frames", []):
+            ts = frame.get("timestamp", 0) // 1000
+            pf = frame.get("participantFrames", {})
+            friend_g = sum(
+                pf[str(pid)].get("totalGold", 0)
+                for pid in pid_to_team
+                if pid_to_team[pid] == self.friend_team_id and str(pid) in pf
             )
-
-    # textが空のものは落とす（欠損イベントなど）
-    events = [e for e in events if e.get("text")]
-    events.sort(key=lambda x: x["t"])
-
-    def html_escape(s):
-        return html.escape(str(s), quote=True)
-
-    def table_html(rows, title_key, team_id):
-        title_ja = "味方チーム" if title_key == "ally_team" else "敵チーム"
-        head = [
-            "POS",
-            "Player",
-            "Champion",
-            "K/D/A",
-            "KDA",
-            "CS",
-            "Gold",
-            "DMG",
-            "Vision",
-            "CC",
-        ]
-        trs = []
-        for r in rows:
-            cls = "user" if r["is_user"] else ""
-            trs.append(
-                f"<tr class='{cls}'>"
-                f"<td>{html_escape(r['pos'])}</td>"
-                f"<td>{html_escape(r['player'])}</td>"
-                f"<td data-champ-en=\"{html_escape(r['champName'])}\">{html_escape(r['champ'])}</td>"
-                f"<td>{r['k']}/{r['d']}/{r['a']}</td>"
-                f"<td>{r['kda']:.2f}</td>"
-                f"<td>{r['cs']}</td>"
-                f"<td>{r['gold']}</td>"
-                f"<td>{r['dmg']}</td>"
-                f"<td>{r['vision']}</td>"
-                f"<td>{r['cc']}</td>"
-                f"</tr>"
+            enemy_g = sum(
+                pf[str(pid)].get("totalGold", 0)
+                for pid in pid_to_team
+                if pid_to_team[pid] != self.friend_team_id and str(pid) in pf
             )
-        return f"""
+            gold_frames.append({"t": ts, "diff": friend_g - enemy_g})
+        return gold_frames
+
+
+def html_escape(s: str) -> str:
+    return html.escape(str(s), quote=True)
+
+
+def table_html(rows, title_key, team_id):
+    title_ja = "味方チーム" if title_key == "ally_team" else "敵チーム"
+    head = [
+        "POS",
+        "Player",
+        "Champion",
+        "K/D/A",
+        "KDA",
+        "CS",
+        "Gold",
+        "DMG",
+        "Vision",
+        "CC",
+    ]
+    trs = []
+    for r in rows:
+        cls = "user" if r["is_user"] else ""
+        trs.append(
+            f"<tr class='{cls}'>"
+            f"<td>{html_escape(r['pos'])}</td>"
+            f"<td>{html_escape(r['player'])}</td>"
+            f"<td data-champ-en=\"{html_escape(r['champName'])}\">{html_escape(r['champ'])}</td>"
+            f"<td>{r['k']}/{r['d']}/{r['a']}</td>"
+            f"<td>{r['kda']:.2f}</td>"
+            f"<td>{r['cs']}</td>"
+            f"<td>{r['gold']}</td>"
+            f"<td>{r['dmg']}</td>"
+            f"<td>{r['vision']}</td>"
+            f"<td>{r['cc']}</td>"
+            f"</tr>"
+        )
+    return f"""
         <section class=\"card\">
           <h2 data-i18n=\"{title_key}\" data-i18n-team=\"{team_id}\">{html_escape(title_ja)}</h2>
           <div class=\"table-wrap\">
@@ -506,6 +442,22 @@ def main():
           </div>
         </section>
         """
+
+
+def build_html(
+    ctx: MatchContext,
+    match: dict,
+    match_path: Path,
+    timeline_path: Path,
+    friend_rows: list,
+    enemy_rows: list,
+    events: list,
+    gold_frames: list,
+    dd_version: str,
+    lang: str,
+) -> str:
+    friend_team_id = ctx.friend_team_id
+    enemy_team_id = ctx.enemy_team_id
 
     events_json = json.dumps(events, ensure_ascii=False)
     players_json = json.dumps(
@@ -536,27 +488,7 @@ def main():
     )
 
     game_info = match["info"]
-    _gv_parts = game_info.get("gameVersion", "0.0").split(".")[:2]
-    dd_version = ".".join(_gv_parts) + ".1"
     game_duration = game_info.get("gameDuration", 1) or 1
-
-    # Timeline フレームからチームゴールド差分を抽出
-    pid_to_team = {p["participantId"]: p["teamId"] for p in participants}
-    gold_frames = []
-    for frame in timeline["info"].get("frames", []):
-        ts = frame.get("timestamp", 0) // 1000  # ms → 秒
-        pf = frame.get("participantFrames", {})
-        friend_g = sum(
-            pf[str(pid)].get("totalGold", 0)
-            for pid in pid_to_team
-            if pid_to_team[pid] == friend_team_id and str(pid) in pf
-        )
-        enemy_g = sum(
-            pf[str(pid)].get("totalGold", 0)
-            for pid in pid_to_team
-            if pid_to_team[pid] != friend_team_id and str(pid) in pf
-        )
-        gold_frames.append({"t": ts, "diff": friend_g - enemy_g})
     gold_frames_json = json.dumps(gold_frames, ensure_ascii=False)
 
     meta = (
@@ -567,7 +499,7 @@ def main():
 
     used_files = f"match: {match_path.name} / timeline: {timeline_path.name} / champ: ddragon {dd_version}"
 
-    html_doc = f"""<!doctype html>
+    return f"""<!doctype html>
 <html lang=\"ja\">
 <head>
 <meta charset=\"utf-8\"/>
@@ -1710,72 +1642,112 @@ render();
 </html>
 """
 
+
+def write_csv(team100: list, team200: list, events: list, out_team: Path, out_events: Path):
+    with out_team.open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(
+            [
+                "teamId",
+                "team",
+                "pos",
+                "player",
+                "champ",
+                "kills",
+                "deaths",
+                "assists",
+                "kda",
+                "cs",
+                "gold",
+                "dmg",
+                "vision",
+                "cc",
+                "is_user",
+            ]
+        )
+        for r in team100 + team200:
+            w.writerow(
+                [
+                    r["teamId"],
+                    r["team"],
+                    r["pos"],
+                    r["player"],
+                    r["champ"],
+                    r["k"],
+                    r["d"],
+                    r["a"],
+                    f"{r['kda']:.4f}",
+                    r["cs"],
+                    r["gold"],
+                    r["dmg"],
+                    r["vision"],
+                    r["cc"],
+                    int(r["is_user"]),
+                ]
+            )
+
+    with out_events.open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["t_ms", "time", "teamId", "team", "type", "text", "raw_json"])
+        for e in events:
+            w.writerow(
+                [
+                    e["t"],
+                    e["time"],
+                    e["teamId"],
+                    e["team"],
+                    e["type"],
+                    e["text"],
+                    json.dumps(e["raw"], ensure_ascii=False),
+                ]
+            )
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument(
+        "--dir",
+        default=str(DATA_DIR),
+        help="JSONが置いてあるディレクトリ（デフォルト: data/）",
+    )
+    ap.add_argument("--no-csv", action="store_true", help="CSVを出さない（HTMLのみ）")
+    ap.add_argument(
+        "--lang",
+        default="ja",
+        choices=["ja", "en"],
+        help="Champion name language for the table (default: ja)",
+    )
+    args = ap.parse_args()
+
+    global _LANG
+    _LANG = args.lang
+
+    match_path, timeline_path = pick_latest_pair(Path(args.dir).expanduser().resolve())
+    match = load_json(match_path)
+    timeline = load_json(timeline_path)
+
+    gv_parts = match["info"].get("gameVersion", "0.0").split(".")[:2]
+    dd_version = ".".join(gv_parts) + ".1"
+    dd_locale = "en_US" if args.lang == "en" else "ja_JP"
+    champ_map = fetch_champ_map(dd_version, dd_locale)
+
+    ctx = MatchContext(match, champ_map, USER_PUUID)
+    team100, team200, friend_rows, enemy_rows = ctx.build_all_rows()
+    events = ctx.build_events(timeline, args.lang)
+    gold_frames = ctx.build_gold_frames(timeline)
+
+    html_doc = build_html(ctx, match, match_path, timeline_path,
+                          friend_rows, enemy_rows, events, gold_frames, dd_version, args.lang)
+
     OUTPUT_DIR.mkdir(exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d%H%M%S")
     out_html = OUTPUT_DIR / f"out_{ts}.html"
-    out_team = OUTPUT_DIR / f"out_{ts}_team.csv"
-    out_events = OUTPUT_DIR / f"out_{ts}_events.csv"
-
     out_html.write_text(html_doc, encoding="utf-8")
 
     if not args.no_csv:
-        with out_team.open("w", newline="", encoding="utf-8") as f:
-            w = csv.writer(f)
-            w.writerow(
-                [
-                    "teamId",
-                    "team",
-                    "pos",
-                    "player",
-                    "champ",
-                    "kills",
-                    "deaths",
-                    "assists",
-                    "kda",
-                    "cs",
-                    "gold",
-                    "dmg",
-                    "vision",
-                    "cc",
-                    "is_user",
-                ]
-            )
-            for r in team100 + team200:
-                w.writerow(
-                    [
-                        r["teamId"],
-                        r["team"],
-                        r["pos"],
-                        r["player"],
-                        r["champ"],
-                        r["k"],
-                        r["d"],
-                        r["a"],
-                        f"{r['kda']:.4f}",
-                        r["cs"],
-                        r["gold"],
-                        r["dmg"],
-                        r["vision"],
-                        r["cc"],
-                        int(r["is_user"]),
-                    ]
-                )
-
-        with out_events.open("w", newline="", encoding="utf-8") as f:
-            w = csv.writer(f)
-            w.writerow(["t_ms", "time", "teamId", "team", "type", "text", "raw_json"])
-            for e in events:
-                w.writerow(
-                    [
-                        e["t"],
-                        e["time"],
-                        e["teamId"],
-                        e["team"],
-                        e["type"],
-                        e["text"],
-                        json.dumps(e["raw"], ensure_ascii=False),
-                    ]
-                )
+        out_team = OUTPUT_DIR / f"out_{ts}_team.csv"
+        out_events = OUTPUT_DIR / f"out_{ts}_events.csv"
+        write_csv(team100, team200, events, out_team, out_events)
 
     print("wrote:")
     print(" ", out_html)
