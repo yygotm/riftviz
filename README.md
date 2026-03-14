@@ -116,7 +116,7 @@ You can also pass a numeric queue ID directly: `--queue 900`
 ```bash
 python src/lol_html_viewer_auto.py
 # or on Windows:
-run.bat
+build_viewer.bat
 ```
 
 ### Options
@@ -138,7 +138,7 @@ Output is saved to `output/out_TIMESTAMP.html`. Open it directly in your browser
 ```
 riftviz/
 ├── .env                         # API_KEY, PLATFORM, PUUID (gitignored)
-├── run.bat                      # Windows shortcut
+├── build_viewer.bat             # Windows shortcut for HTML generation
 ├── src/
 │   ├── fetch_match_data.py      # Fetch match data from Riot API
 │   ├── lol_html_viewer_auto.py  # Generate the HTML viewer
