@@ -1,0 +1,32 @@
+# API key
+.env
+
+# Match data from Riot API (not to be redistributed)
+data/*.json
+data/archive/
+
+# Generated output
+output/
+!output/.gitkeep
+
+# Claude settings
+.claude/
+CLAUDE.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
