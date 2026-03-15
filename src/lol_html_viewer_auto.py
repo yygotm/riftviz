@@ -682,6 +682,8 @@ def write_csv(
                 "dmg",
                 "vision",
                 "cc",
+                "kp",
+                "dead_s",
                 "is_user",
             ]
         )
@@ -702,6 +704,8 @@ def write_csv(
                     r["dmg"],
                     r["vision"],
                     r["cc"],
+                    f"{r['kp']:.4f}",
+                    r["dead_s"],
                     int(r["is_user"]),
                 ]
             )
