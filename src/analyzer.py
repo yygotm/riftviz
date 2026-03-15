@@ -460,7 +460,9 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="AI-powered LoL match analysis")
     ap.add_argument("--team", default=None, help="Path to team stats CSV (default: latest in output/)")
     ap.add_argument("--events", default=None, help="Path to events CSV (default: latest in output/)")
-    ap.add_argument("--lang", default="en", choices=["ja", "en"], help="Report language (default: en)")
+    _env_lang = load_env(ROOT / ".env").get("LANG", "ja").lower()
+    _default_lang = _env_lang if _env_lang in ("ja", "en") else "ja"
+    ap.add_argument("--lang", default=_default_lang, choices=["ja", "en"], help="Report language (default: from .env LANG, fallback ja)")
     ap.add_argument(
         "--provider",
         default="gemini",
