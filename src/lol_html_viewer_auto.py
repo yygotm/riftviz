@@ -21,7 +21,13 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from shared import load_env, PLATFORM_TO_REGION  # noqa: E402
+from constants import (  # noqa: E402
+    ALLOWED_EVENT_TYPES,
+    LANE_NAMES,
+    MONSTER_NAMES,
+    PLATFORM_TO_REGION,
+    load_env,
+)
 
 # ===== プロジェクトルートと各ディレクトリ =====
 ROOT = Path(__file__).resolve().parent.parent
@@ -29,12 +35,6 @@ DATA_DIR = ROOT / "data"
 OUTPUT_DIR = ROOT / "output"
 ASSETS_DIR = ROOT / "assets"
 _TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
-
-ALLOWED_EVENT_TYPES = {
-    "CHAMPION_KILL",
-    "ELITE_MONSTER_KILL",
-    "BUILDING_KILL",
-}
 
 
 def _load_template(name: str) -> str:
@@ -153,19 +153,6 @@ def fetch_champ_map(dd_version: str, dd_locale: str) -> dict:
         return {}
 
 
-# ── Bilingual name maps (module-level) ────────────────────────────────────
-_MONSTER_NAMES: dict[str, dict[str, str]] = {
-    "DRAGON":       {"ja": "ドラゴン",       "en": "Dragon"},
-    "BARON_NASHOR": {"ja": "バロン",         "en": "Baron Nashor"},
-    "RIFTHERALD":   {"ja": "リフトヘラルド", "en": "Rift Herald"},
-}
-_LANE_NAMES: dict[str, dict[str, str]] = {
-    "TOP_LANE": {"ja": "トップ", "en": "Top"},
-    "MID_LANE": {"ja": "ミッド", "en": "Mid"},
-    "BOT_LANE": {"ja": "ボット", "en": "Bot"},
-}
-
-
 class MatchContext:
     """Match state: participant lookup, event text, and row building."""
 
@@ -245,7 +232,7 @@ class MatchContext:
         sub = ev.get("monsterSubType", "")
         icon = "🐉" if monster == "DRAGON" else "👑"
 
-        entry = _MONSTER_NAMES.get(monster)
+        entry = MONSTER_NAMES.get(monster)
         if entry:
             m = entry[lang]
         else:
@@ -267,7 +254,7 @@ class MatchContext:
         else:
             icon, b_ja, b_en = "🏗️", building or "建物", building or "Building"
 
-        lane_entry = _LANE_NAMES.get(lane)
+        lane_entry = LANE_NAMES.get(lane)
         if lane_entry:
             lane_label = lane_entry[lang]
         else:

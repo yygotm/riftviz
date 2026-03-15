@@ -9,21 +9,12 @@ from pathlib import Path
 import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from shared import load_env, PLATFORM_TO_REGION  # noqa: E402
+from constants import load_env, PLATFORM_TO_REGION, QUEUE_PRESETS  # noqa: E402
 
 # --- プロジェクトルートと各ディレクトリ ---
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 ARCHIVE_DIR = DATA_DIR / "archive"
-
-QUEUE_PRESETS = {
-    "swift": 1700,
-    "ranked-solo": 420,
-    "ranked-flex": 440,
-    "normal-draft": 400,
-    "normal-blind": 430,
-    "aram": 450,
-}
 
 # --- CLI 引数 ---
 parser = argparse.ArgumentParser(
