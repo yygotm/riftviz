@@ -240,19 +240,19 @@ def _objective_totals(events: list[dict], ally_team_id: int) -> dict:
 
 
 def _build_system_prompt(lang: str) -> str:
-    """Return the system prompt for the coaching AI in the given language."""
+    """Return the system prompt for the analysis AI in the given language."""
     if lang == "ja":
         return (
-            "あなたはリーグ・オブ・レジェンド（LoL）の専門コーチです。"
-            "スウィフトプレイの試合データを元に、プレイヤーの強みと改善点を"
-            "具体的かつ建設的に分析してください。"
+            "あなたはリーグ・オブ・レジェンド（LoL）の試合アナリストです。"
+            "提供された試合データを分析し、"
+            "プレイヤーの強みと改善点を具体的かつ建設的に伝えてください。"
             "数値の羅列ではなく、「なぜその数値になったか」「どうすれば改善できるか」を"
             "タイムラインの根拠と共に説明してください。"
             "回答はMarkdown形式で出力してください。"
         )
     return (
-        "You are a specialist League of Legends coach. "
-        "Analyze the provided Swift Play match data and give the player "
+        "You are a League of Legends match analyst. "
+        "Analyze the provided match data and give the player "
         "specific, constructive feedback on their strengths and areas to improve. "
         "Focus on the 'why' behind the numbers and back your points with timeline evidence. "
         "Format your response in Markdown."
