@@ -102,6 +102,37 @@ def pick_latest_pair(base_dir: Path) -> tuple[Path, Path]:
     return match_path, fallback
 
 
+def pick_all_pairs(base_dir: Path) -> list[tuple[Path, Path]]:
+    """Return all (match_path, timeline_path) pairs found in base_dir, sorted by mtime ascending.
+
+    Skips match files whose corresponding timeline is missing.
+
+    Args:
+        base_dir: Directory to scan for ``{PLATFORM}_\\d+.json`` files.
+
+    Returns:
+        List of (match_path, timeline_path) tuples, oldest first.
+    """
+    files = {p.name: p for p in base_dir.iterdir() if p.is_file()}
+    pairs = []
+    for name, match_path in files.items():
+        m = MATCH_RE.match(name)
+        if not m:
+            continue
+        game_id = m.group(1)
+        tl_name = f"{PLATFORM}_{game_id}_timeline.json"
+        if tl_name not in files:
+            print(
+                f"[SKIP] timeline nashi: {name}"
+                if _LANG == "ja"
+                else f"[SKIP] no timeline: {name}"
+            )
+            continue
+        pairs.append((match_path, files[tl_name]))
+    pairs.sort(key=lambda pair: pair[0].stat().st_mtime)
+    return pairs
+
+
 def organize_all_outputs() -> None:
     """Move all but the newest output set (HTML + CSV) to output/archive/.
 
@@ -727,6 +758,59 @@ def write_csv(
             )
 
 
+def _process_one_pair(
+    match_path: Path,
+    timeline_path: Path,
+    no_csv: bool,
+    lang: str,
+    stem: str | None = None,
+) -> None:
+    """Load a single JSON pair and write the HTML (and optionally CSV) to output/.
+
+    Args:
+        match_path:    Path to the match detail JSON.
+        timeline_path: Path to the matching timeline JSON.
+        no_csv:        When ``True``, skip writing CSV files.
+        lang:          Display language (``"ja"`` or ``"en"``).
+        stem:          Output filename stem (e.g. ``"JP1_566188687"``).
+                       When ``None``, a timestamp string is used instead.
+    """
+    match = load_json(match_path)
+    timeline = load_json(timeline_path)
+
+    gv_parts = match["info"].get("gameVersion", "0.0").split(".")[:2]
+    dd_version = ".".join(gv_parts) + ".1"
+    dd_locale = "en_US" if lang == "en" else "ja_JP"
+    champ_map = fetch_champ_map(dd_version, dd_locale)
+
+    ctx = MatchContext(match, champ_map, USER_PUUID)
+    team100, team200, friend_rows, enemy_rows = ctx.build_all_rows()
+    events = ctx.build_events(timeline, lang)
+    gold_frames = ctx.build_gold_frames(timeline)
+
+    html_doc = build_html(ctx, match, match_path, timeline_path,
+                          friend_rows, enemy_rows, events, gold_frames, dd_version, lang)
+
+    OUTPUT_DIR.mkdir(exist_ok=True)
+    name = stem or datetime.now().strftime("%Y%m%d%H%M%S")
+    out_html = OUTPUT_DIR / f"out_{name}.html"
+    out_html.write_text(html_doc, encoding="utf-8")
+
+    if not no_csv:
+        out_team = OUTPUT_DIR / f"out_{name}_team.csv"
+        out_events = OUTPUT_DIR / f"out_{name}_events.csv"
+        write_csv(team100, team200, events, out_team, out_events)
+
+    print("wrote:")
+    print(" ", out_html)
+    if not no_csv:
+        print(" ", out_team)
+        print(" ", out_events)
+    print("used:")
+    print(" ", match_path)
+    print(" ", timeline_path)
+
+
 def main(argv=None):
     """CLI entry point: parse args, load JSONs, generate HTML + CSV, print paths.
 
@@ -748,48 +832,57 @@ def main(argv=None):
         choices=["ja", "en"],
         help="Champion name language for the table (default: ja)",
     )
+    ap.add_argument(
+        "--all",
+        action="store_true",
+        dest="all_pairs",
+        help="指定ディレクトリ内の全試合ペアをHTMLに変換する（デフォルトは最新1件のみ）",
+    )
+    ap.add_argument(
+        "--count",
+        "-n",
+        type=int,
+        default=None,
+        metavar="N",
+        help="--all と組み合わせて最新N件のみ処理する（例: --all --count 10）",
+    )
     args = ap.parse_args(argv)
 
     global _LANG
     _LANG = args.lang
 
-    match_path, timeline_path = pick_latest_pair(Path(args.dir).expanduser().resolve())
-    match = load_json(match_path)
-    timeline = load_json(timeline_path)
+    base_dir = Path(args.dir).expanduser().resolve()
 
-    gv_parts = match["info"].get("gameVersion", "0.0").split(".")[:2]
-    dd_version = ".".join(gv_parts) + ".1"
-    dd_locale = "en_US" if args.lang == "en" else "ja_JP"
-    champ_map = fetch_champ_map(dd_version, dd_locale)
-
-    ctx = MatchContext(match, champ_map, USER_PUUID)
-    team100, team200, friend_rows, enemy_rows = ctx.build_all_rows()
-    events = ctx.build_events(timeline, args.lang)
-    gold_frames = ctx.build_gold_frames(timeline)
-
-    html_doc = build_html(ctx, match, match_path, timeline_path,
-                          friend_rows, enemy_rows, events, gold_frames, dd_version, args.lang)
-
-    OUTPUT_DIR.mkdir(exist_ok=True)
-    ts = datetime.now().strftime("%Y%m%d%H%M%S")
-    out_html = OUTPUT_DIR / f"out_{ts}.html"
-    out_html.write_text(html_doc, encoding="utf-8")
-
-    if not args.no_csv:
-        out_team = OUTPUT_DIR / f"out_{ts}_team.csv"
-        out_events = OUTPUT_DIR / f"out_{ts}_events.csv"
-        write_csv(team100, team200, events, out_team, out_events)
-
-    print("wrote:")
-    print(" ", out_html)
-    if not args.no_csv:
-        print(" ", out_team)
-        print(" ", out_events)
-    print("used:")
-    print(" ", match_path)
-    print(" ", timeline_path)
+    if args.all_pairs:
+        pairs = pick_all_pairs(base_dir)
+        if not pairs:
+            print(
+                "❌ JSONペアが見つかりませんでした" if args.lang == "ja"
+                else "❌ No JSON pairs found"
+            )
+            return
+        if args.count is not None:
+            pairs = pairs[-args.count:]   # newest N (list is sorted oldest-first)
+        total = len(pairs)
+        print(
+            f"[batch] {total} 試合分のHTMLを生成します..." if args.lang == "ja"
+            else f"[batch] Generating HTML for {total} matches..."
+        )
+        for i, (match_path, timeline_path) in enumerate(pairs, 1):
+            print(f"\n[{i}/{total}] {match_path.name}")
+            stem = MATCH_RE.match(match_path.name).group(0).removesuffix(".json")
+            _process_one_pair(match_path, timeline_path, args.no_csv, args.lang, stem=stem)
+        print(
+            f"\n[done] {total} HTML -> output/" if args.lang == "ja"
+            else f"\n[done] {total} HTML files written to output/"
+        )
+        return True  # caller should skip organize_all_outputs in batch mode
+    else:
+        match_path, timeline_path = pick_latest_pair(base_dir)
+        _process_one_pair(match_path, timeline_path, args.no_csv, args.lang)
+    return False
 
 
 if __name__ == "__main__":
-    main()
-    organize_all_outputs()
+    if not main():
+        organize_all_outputs()
