@@ -43,7 +43,7 @@ PLATFORM_TO_REGION: dict[str, str] = {
 # ── Queue presets ─────────────────────────────────────────────────────────────
 
 QUEUE_PRESETS: dict[str, int] = {
-    "swift": 1700,
+    "swift": 480,
     "ranked-solo": 420,
     "ranked-flex": 440,
     "normal-draft": 400,
