@@ -636,7 +636,7 @@ def write_csv(team100: list[dict], team200: list[dict], events: list[dict], out_
             )
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--dir",
@@ -650,7 +650,7 @@ def main():
         choices=["ja", "en"],
         help="Champion name language for the table (default: ja)",
     )
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     global _LANG
     _LANG = args.lang
