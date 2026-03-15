@@ -1,11 +1,12 @@
-"""AI-powered match analysis using Claude API.
+"""AI-powered match analysis — supports Gemini (free) and Claude.
 
 Reads the latest team-stats CSV and events CSV produced by lol_html_viewer_auto.py,
-pre-processes the data into structured context, and calls the Claude API for
+pre-processes the data into structured context, and calls an AI API for
 specific, data-driven coaching feedback.
 
 Usage:
-    python src/analyzer.py                          # auto-detect latest CSVs
+    python src/analyzer.py                          # Gemini (free, default)
+    python src/analyzer.py --provider claude        # Claude (paid)
     python src/analyzer.py --team out_team.csv --events out_events.csv
     python src/analyzer.py --lang en
 """
@@ -16,8 +17,6 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
-
-import anthropic
 
 # Ensure emoji and Japanese text print correctly on Windows (cp932 consoles).
 if hasattr(sys.stdout, "reconfigure"):
@@ -31,7 +30,12 @@ OUTPUT_DIR = ROOT / "output"
 
 _TEAM_GLOB = "out_*_team.csv"
 _EVENTS_GLOB = "out_*_events.csv"
-MODEL = "claude-sonnet-4-6"
+
+# Model identifiers per provider
+_MODELS = {
+    "gemini": "gemini-1.5-flash",
+    "claude": "claude-sonnet-4-6",
+}
 
 # Objective event types to include in the context window around deaths
 _OBJECTIVE_TYPES = {"ELITE_MONSTER_KILL", "BUILDING_KILL"}
@@ -234,6 +238,26 @@ def _objective_totals(events: list[dict], ally_team_id: int) -> dict:
 # ── Prompt builder ─────────────────────────────────────────────────────────────
 
 
+def _build_system_prompt(lang: str) -> str:
+    """Return the system prompt for the coaching AI in the given language."""
+    if lang == "ja":
+        return (
+            "あなたはリーグ・オブ・レジェンド（LoL）の専門コーチです。"
+            "スウィフトプレイの試合データを元に、プレイヤーの強みと改善点を"
+            "具体的かつ建設的に分析してください。"
+            "数値の羅列ではなく、「なぜその数値になったか」「どうすれば改善できるか」を"
+            "タイムラインの根拠と共に説明してください。"
+            "回答はMarkdown形式で出力してください。"
+        )
+    return (
+        "You are a specialist League of Legends coach. "
+        "Analyze the provided Swift Play match data and give the player "
+        "specific, constructive feedback on their strengths and areas to improve. "
+        "Focus on the 'why' behind the numbers and back your points with timeline evidence. "
+        "Format your response in Markdown."
+    )
+
+
 def _build_prompt(
     team_rows: list[dict],
     events: list[dict],
@@ -249,7 +273,7 @@ def _build_prompt(
         lang:        ``"ja"`` or ``"en"``.
 
     Returns:
-        A complete prompt string ready to pass to the Claude API.
+        A complete prompt string ready to pass to the AI API.
     """
     summary = _build_team_summary(team_rows)
     user = summary["user"]
@@ -376,7 +400,29 @@ def _build_prompt(
     return "\n".join(lines)
 
 
-# ── API call ──────────────────────────────────────────────────────────────────
+# ── API calls ─────────────────────────────────────────────────────────────────
+
+
+def _call_gemini(prompt: str, api_key: str, lang: str) -> str:
+    """Send the analysis prompt to Gemini and return the response text.
+
+    Args:
+        prompt:  The user-facing analysis prompt.
+        api_key: Google AI Studio API key (GEMINI_API_KEY in .env).
+        lang:    ``"ja"`` or ``"en"`` — used in the system instruction.
+
+    Returns:
+        The model's response as a string.
+    """
+    import google.generativeai as genai  # lazy import — only needed for this provider
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(
+        model_name=_MODELS["gemini"],
+        system_instruction=_build_system_prompt(lang),
+    )
+    response = model.generate_content(prompt)
+    return response.text
 
 
 def _call_claude(prompt: str, api_key: str, lang: str) -> str:
@@ -384,36 +430,19 @@ def _call_claude(prompt: str, api_key: str, lang: str) -> str:
 
     Args:
         prompt:  The user-facing analysis prompt.
-        api_key: Anthropic API key.
+        api_key: Anthropic API key (ANTHROPIC_API_KEY in .env).
         lang:    ``"ja"`` or ``"en"`` — used in the system prompt.
 
     Returns:
         The model's response as a string.
     """
+    import anthropic  # lazy import — only needed for this provider
+
     client = anthropic.Anthropic(api_key=api_key)
-
-    if lang == "ja":
-        system = (
-            "あなたはリーグ・オブ・レジェンド（LoL）の専門コーチです。"
-            "スウィフトプレイの試合データを元に、プレイヤーの強みと改善点を"
-            "具体的かつ建設的に分析してください。"
-            "数値の羅列ではなく、「なぜその数値になったか」「どうすれば改善できるか」を"
-            "タイムラインの根拠と共に説明してください。"
-            "回答はMarkdown形式で出力してください。"
-        )
-    else:
-        system = (
-            "You are a specialist League of Legends coach. "
-            "Analyze the provided Swift Play match data and give the player "
-            "specific, constructive feedback on their strengths and areas to improve. "
-            "Focus on the 'why' behind the numbers and back your points with timeline evidence. "
-            "Format your response in Markdown."
-        )
-
     message = client.messages.create(
-        model=MODEL,
+        model=_MODELS["claude"],
         max_tokens=2048,
-        system=system,
+        system=_build_system_prompt(lang),
         messages=[{"role": "user", "content": prompt}],
     )
     return message.content[0].text
@@ -423,8 +452,8 @@ def _call_claude(prompt: str, api_key: str, lang: str) -> str:
 
 
 def main() -> None:
-    """CLI entry point: load CSVs, build prompt, call Claude, save report."""
-    ap = argparse.ArgumentParser(description="AI-powered LoL match analysis via Claude API")
+    """CLI entry point: load CSVs, build prompt, call AI, save report."""
+    ap = argparse.ArgumentParser(description="AI-powered LoL match analysis")
     ap.add_argument("--team", default=None, help="Path to team stats CSV (default: latest in output/)")
     ap.add_argument("--events", default=None, help="Path to events CSV (default: latest in output/)")
     ap.add_argument(
@@ -433,15 +462,31 @@ def main() -> None:
         help="Match result: '勝利' / '敗北' / 'win' / 'loss'. Auto-detected if omitted.",
     )
     ap.add_argument("--lang", default="ja", choices=["ja", "en"], help="Output language (default: ja)")
+    ap.add_argument(
+        "--provider",
+        default="gemini",
+        choices=["gemini", "claude"],
+        help="AI provider to use (default: gemini — free tier available)",
+    )
     args = ap.parse_args()
 
     env = load_env(ROOT / ".env")
-    api_key = env.get("ANTHROPIC_API_KEY", "")
+
+    # Resolve API key for the chosen provider
+    if args.provider == "gemini":
+        api_key = env.get("GEMINI_API_KEY", "")
+        key_name = "GEMINI_API_KEY"
+        caller = _call_gemini
+    else:
+        api_key = env.get("ANTHROPIC_API_KEY", "")
+        key_name = "ANTHROPIC_API_KEY"
+        caller = _call_claude
+
     if not api_key:
         print(
-            "❌ ANTHROPIC_API_KEY が .env に見つかりません — ANTHROPIC_API_KEY=sk-ant-... を追記してください"
+            f"❌ {key_name} が .env に見つかりません — {key_name}=... を追記してください"
             if args.lang == "ja"
-            else "❌ ANTHROPIC_API_KEY not found in .env — add ANTHROPIC_API_KEY=sk-ant-... and retry"
+            else f"❌ {key_name} not found in .env — add {key_name}=... and retry"
         )
         sys.exit(1)
 
@@ -465,17 +510,18 @@ def main() -> None:
     if args.result:
         game_result = args.result
     else:
-        # Default: unknown — let Claude infer from context if not provided
         game_result = "不明（データから推定してください）" if args.lang == "ja" else "Unknown (infer from data)"
 
     prompt = _build_prompt(team_rows, events, game_result, args.lang)
+
+    provider_label = "Gemini" if args.provider == "gemini" else "Claude"
     print(
-        "🤖 Claude に送信中..."
+        f"🤖 {provider_label} に送信中..."
         if args.lang == "ja"
-        else "🤖 Sending to Claude..."
+        else f"🤖 Sending to {provider_label}..."
     )
 
-    report = _call_claude(prompt, api_key, args.lang)
+    report = caller(prompt, api_key, args.lang)
 
     # Save report
     ts = datetime.now().strftime("%Y%m%d%H%M%S")
