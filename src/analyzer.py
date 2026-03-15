@@ -33,7 +33,7 @@ _EVENTS_GLOB = "out_*_events.csv"
 
 # Model identifiers per provider
 _MODELS = {
-    "gemini": "gemini-2.0-flash-lite",
+    "gemini": "gemini-2.5-flash",
     "claude": "claude-sonnet-4-6",
 }
 
