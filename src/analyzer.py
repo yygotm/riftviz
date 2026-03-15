@@ -460,7 +460,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="AI-powered LoL match analysis")
     ap.add_argument("--team", default=None, help="Path to team stats CSV (default: latest in output/)")
     ap.add_argument("--events", default=None, help="Path to events CSV (default: latest in output/)")
-    ap.add_argument("--lang", default="ja", choices=["ja", "en"], help="Report language (default: ja)")
+    ap.add_argument("--lang", default="en", choices=["ja", "en"], help="Report language (default: en)")
     ap.add_argument(
         "--provider",
         default="gemini",

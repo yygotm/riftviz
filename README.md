@@ -186,7 +186,7 @@ Reads the latest CSV pair from `output/`, builds a structured prompt (team ranki
 | Flag | Default | Description |
 |---|---|---|
 | `--provider` | `gemini` | AI provider: `gemini` (free) or `claude` (paid) |
-| `--lang` | `ja` | Report language: `ja` or `en` |
+| `--lang` | `en` | Report language: `en` or `ja` |
 | `--team` | *(latest)* | Path to a specific team stats CSV |
 | `--events` | *(latest)* | Path to a specific events CSV |
 
