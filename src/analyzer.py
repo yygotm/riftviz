@@ -89,7 +89,10 @@ def _load_events_csv(path: Path) -> list[dict]:
                     "team": row["team"],
                     "type": row["type"],
                     "text": row["text"],
-                    "raw": json.loads(row["raw_json"]),
+                    "killerId": int(row["killerId"]) if row.get("killerId") else None,
+                    "victimId": int(row["victimId"]) if row.get("victimId") else None,
+                    "monsterType": row.get("monsterType", ""),
+                    "buildingType": row.get("buildingType", ""),
                 }
             )
     return rows
@@ -178,15 +181,14 @@ def _death_sequences(user: dict, events: list[dict], window_ms: int = 60_000) ->
     sequences = []
 
     for ev in events:
-        raw = ev.get("raw", {})
         # Detect kills where the user was the victim
         if ev["type"] != "CHAMPION_KILL":
             continue
         # Match by champion name in the Japanese event text
         if user_champ not in ev["text"] or "をキル" not in ev["text"]:
             continue
-        # Confirm victim by checking raw victimId exists
-        if not raw.get("victimId"):
+        # Confirm victim by checking victimId exists
+        if not ev.get("victimId"):
             continue
 
         t = ev["t_ms"]
@@ -222,10 +224,9 @@ def _objective_totals(events: list[dict], ally_team_id: int) -> dict:
         "tower": {"ally": 0, "enemy": 0},
     }
     for ev in events:
-        raw = ev.get("raw", {})
         side = "ally" if ev["teamId"] == ally_team_id else "enemy"
         if ev["type"] == "ELITE_MONSTER_KILL":
-            m = raw.get("monsterType", "")
+            m = ev.get("monsterType", "")
             if m == "DRAGON":
                 totals["dragon"][side] += 1
             elif m == "BARON_NASHOR":
@@ -233,7 +234,7 @@ def _objective_totals(events: list[dict], ally_team_id: int) -> dict:
             elif m == "RIFTHERALD":
                 totals["herald"][side] += 1
         elif ev["type"] == "BUILDING_KILL":
-            if raw.get("buildingType") == "TOWER_BUILDING":
+            if ev.get("buildingType") == "TOWER_BUILDING":
                 totals["tower"][side] += 1
     return totals
 

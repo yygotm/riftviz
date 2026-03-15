@@ -755,7 +755,8 @@ def write_csv(
 
     with out_events.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow(["t_ms", "time", "teamId", "team", "type", "text"])
+        w.writerow(["t_ms", "time", "teamId", "team", "type", "text",
+                    "killerId", "victimId", "monsterType", "buildingType"])
         for e in events:
             w.writerow(
                 [
@@ -765,6 +766,10 @@ def write_csv(
                     e["team"],
                     e["type"],
                     e["text"],
+                    e.get("killerId", ""),
+                    e.get("victimId", ""),
+                    e.get("monsterType", ""),
+                    e.get("buildingType", ""),
                 ]
             )
 
