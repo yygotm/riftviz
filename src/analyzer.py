@@ -18,6 +18,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import markdown as md_lib
+
 # Ensure emoji and Japanese text print correctly on Windows (cp932 consoles).
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -527,11 +529,36 @@ def main() -> None:
 
     report = caller(prompt, api_key, args.lang)
 
-    # Save report
+    # Save report as HTML
     ts = datetime.now().strftime("%Y%m%d%H%M%S")
-    out_path = OUTPUT_DIR / f"analysis_{ts}.md"
+    out_path = OUTPUT_DIR / f"analysis_{ts}.html"
     OUTPUT_DIR.mkdir(exist_ok=True)
-    out_path.write_text(report, encoding="utf-8")
+    body_html = md_lib.markdown(report, extensions=["tables", "fenced_code"])
+    title = f"Match Analysis — {ts}"
+    html = f"""<!DOCTYPE html>
+<html lang="{args.lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title}</title>
+<style>
+  body {{ background:#0e1117; color:#c9d1d9; font-family:sans-serif; max-width:860px; margin:40px auto; padding:0 20px; line-height:1.7; }}
+  h1,h2,h3 {{ color:#58a6ff; border-bottom:1px solid #30363d; padding-bottom:.3em; }}
+  table {{ border-collapse:collapse; width:100%; margin:1em 0; }}
+  th,td {{ border:1px solid #30363d; padding:6px 12px; text-align:left; }}
+  th {{ background:#161b22; color:#58a6ff; }}
+  tr:nth-child(even) {{ background:#161b22; }}
+  code {{ background:#161b22; padding:2px 6px; border-radius:4px; font-size:.9em; }}
+  pre {{ background:#161b22; padding:16px; border-radius:6px; overflow-x:auto; }}
+  strong {{ color:#e6edf3; }}
+  hr {{ border:none; border-top:1px solid #30363d; }}
+</style>
+</head>
+<body>
+{body_html}
+</body>
+</html>"""
+    out_path.write_text(html, encoding="utf-8")
 
     print(
         f"✅ レポートを保存しました: {out_path}"

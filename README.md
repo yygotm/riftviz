@@ -56,7 +56,7 @@ A local League of Legends match analysis tool that fetches data from the Riot Ga
 ```bash
 git clone https://github.com/yygotm/riftviz.git
 cd riftviz
-pip install requests google-genai anthropic   # anthropic only needed for --provider claude
+pip install -r requirements.txt
 ```
 
 ### 1. Get a Riot API Key
