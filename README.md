@@ -91,7 +91,13 @@ The response looks like:
 
 ### 3. Create `.env`
 
-Create a `.env` file in the project root:
+Copy the example and fill in your keys:
+
+```bash
+cp .env.example .env
+```
+
+Or create it manually:
 
 ```
 API_KEY=RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
@@ -247,6 +253,7 @@ By focusing on these areas, you can leverage your strong scaling and damage outp
 ```
 riftviz/
 ├── .env                         # API_KEY, PLATFORM, PUUID, LANG, GEMINI_API_KEY (gitignored)
+├── .env.example                 # Template — copy to .env and fill in your keys
 ├── build_viewer.bat             # Windows shortcut for Step 2
 ├── src/
 │   ├── fetch_match_data.py      # Step 1 — fetch match data from Riot API
