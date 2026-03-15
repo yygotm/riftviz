@@ -9,10 +9,8 @@ No external assets — fully self-contained dark-theme HTML.
 
 import argparse
 import csv
-import glob
 import html
 import json
-import os
 import re
 import shutil
 import sys
@@ -38,10 +36,12 @@ _TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
 
 def _load_template(name: str) -> str:
+    """Read and return a template file from src/templates/."""
     return (_TEMPLATES_DIR / name).read_text(encoding="utf-8")
 
 
-def load_json(p: Path):
+def load_json(p: Path) -> dict:
+    """Load and return a JSON file as a dict."""
     return json.load(p.open("r", encoding="utf-8"))
 
 
@@ -65,7 +65,15 @@ TL_RE = re.compile(rf"^{re.escape(PLATFORM)}_(\d+)_timeline\.json$")
 
 
 def pick_latest_pair(base_dir: Path) -> tuple[Path, Path]:
-    r"""同フォルダの中の最新の JP1_\d+.json を match として採用し、対応timelineを探す。"""
+    """Return (match_path, timeline_path) for the most-recently modified match JSON in base_dir.
+
+    Picks the newest ``{PLATFORM}_\\d+.json`` file as the match, then looks for the
+    corresponding ``{PLATFORM}_\\d+_timeline.json``.  Falls back to the newest
+    timeline file available if the exact pair is not found.
+
+    Raises:
+        FileNotFoundError: if no match JSON or no timeline JSON exists in base_dir.
+    """
     files = [p for p in base_dir.iterdir() if p.is_file()]
 
     match_candidates = [p for p in files if MATCH_RE.match(p.name)]
@@ -95,44 +103,51 @@ def pick_latest_pair(base_dir: Path) -> tuple[Path, Path]:
 
 
 def organize_all_outputs() -> None:
+    """Move all but the newest output set (HTML + CSV) to output/archive/.
+
+    Files are compared by mtime; anything older than the newest file by more
+    than 1 second is treated as a previous run and archived.
+    """
     archive_dir = OUTPUT_DIR / "archive"
     archive_dir.mkdir(exist_ok=True)
 
-    # 対象拡張子のリスト
-    extensions = ["*.csv", "*.html"]
-    all_files = []
-    for ext in extensions:
-        all_files.extend(glob.glob(str(OUTPUT_DIR / ext)))
+    all_files = sorted(
+        [p for ext in ("*.csv", "*.html") for p in OUTPUT_DIR.glob(ext)],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
 
     if not all_files:
         return
 
-    # 更新日時でソート（新しい順）
-    all_files.sort(key=os.path.getmtime, reverse=True)
-
-    # 【重要】最新の「セット」を残すロジック
-    # ここでは、最も新しいファイル1件（最新のHTMLかCSV）を基準とし、
-    # それ以外の古いタイムスタンプを持つファイルを移動させます。
-    latest_time = os.path.getmtime(all_files[0])
-
-    for f in all_files:
-        # 最新ファイル（またはそれとほぼ同時刻に生成されたファイル）以外を移動
-        # 1秒程度の誤差は許容範囲として判定
-        if os.path.getmtime(f) < latest_time - 1:
-            dest = archive_dir / os.path.basename(f)
+    latest_mtime = all_files[0].stat().st_mtime
+    for p in all_files:
+        if p.stat().st_mtime < latest_mtime - 1:
+            dest = archive_dir / p.name
             try:
-                shutil.move(f, str(dest))
-                print(f"Moved to output/archive/: {os.path.basename(f)}")
+                shutil.move(str(p), str(dest))
+                print(f"Moved to output/archive/: {p.name}")
             except Exception as e:  # pylint: disable=broad-exception-caught
-                print(f"Error moving {f}: {e}")
+                print(f"Error moving {p}: {e}")
 
 
 def fmt_time(ms: int | None) -> str:
+    """Convert milliseconds to a ``MM:SS`` string."""
     s = (ms or 0) // 1000
     return f"{s // 60:02d}:{s % 60:02d}"
 
 
 def fetch_champ_map(dd_version: str, dd_locale: str) -> dict:
+    """Fetch champion ID → name mapping from Data Dragon.
+
+    Args:
+        dd_version: Data Dragon patch version (e.g. ``"15.1.1"``).
+        dd_locale:  Locale string (e.g. ``"ja_JP"`` or ``"en_US"``).
+
+    Returns:
+        Dict mapping champion key strings to localised display names.
+        Returns an empty dict on network or parse errors.
+    """
     url = f"https://ddragon.leagueoflegends.com/cdn/{dd_version}/data/{dd_locale}/champion.json"
     try:
         with urllib.request.urlopen(url, timeout=10) as r:
@@ -175,9 +190,17 @@ class MatchContext:
         self.friend_team_id = self.user_team_id
         self.enemy_team_id = 200 if self.friend_team_id == 100 else 100
 
+        # Build once; avoids reconstructing the dict on every event_text() call.
+        self._event_handlers = {
+            "CHAMPION_KILL": self._champion_kill_text,
+            "ELITE_MONSTER_KILL": self._elite_monster_text,
+            "BUILDING_KILL": self._building_text,
+        }
+
     # ── Lookup helpers ────────────────────────────────────────────────────
 
     def champ_name(self, champ_id: int) -> str:
+        """Return the localised champion name for a champion ID, or ``"ID:<n>"`` if unknown."""
         return self.champ_map.get(str(champ_id), f"ID:{champ_id}")
 
     def get_p(self, pid: int | None) -> dict | None:
@@ -187,6 +210,10 @@ class MatchContext:
         return self.pid2p.get(pid)
 
     def champ_from_pid(self, pid, lang: str = "ja") -> str:
+        """Return the champion name for a participant ID, in the requested language.
+
+        Falls back to ``"不明"`` / ``"Unknown"`` when the participant is not found.
+        """
         p = self.get_p(pid)
         if not p:
             return "不明" if lang == "ja" else "Unknown"
@@ -196,6 +223,11 @@ class MatchContext:
 
     @staticmethod
     def display_name(p: dict) -> str:
+        """Return the best available display name for a participant.
+
+        Prefers ``riotIdGameName#riotIdTagline``; falls back to ``summonerName``,
+        bare game name, or ``PID:<n>`` as a last resort.
+        """
         gn = p.get("riotIdGameName") or ""
         tl = p.get("riotIdTagline") or ""
         if gn and tl:
@@ -203,6 +235,7 @@ class MatchContext:
         return p.get("summonerName") or gn or f"PID:{p.get('participantId')}"
 
     def team_label(self, team_id: int, lang: str = "ja") -> str:
+        """Return ``"味方"/"Ally"`` or ``"敵"/"Enemy"`` relative to the user's team."""
         if team_id == self.user_team_id:
             return "味方" if lang == "ja" else "Ally"
         if team_id in (100, 200):
@@ -212,21 +245,22 @@ class MatchContext:
     # ── Event text ────────────────────────────────────────────────────────
 
     def event_text(self, ev: dict, lang: str = "ja") -> str:
-        """Return a human-readable description of a timeline event."""
-        ev_type = ev.get("type", "")
-        _HANDLER = {
-            "CHAMPION_KILL": self._champion_kill_text,
-            "ELITE_MONSTER_KILL": self._elite_monster_text,
-            "BUILDING_KILL": self._building_text,
-        }
-        return _HANDLER.get(ev_type, lambda ev, lang: "")(ev, lang)
+        """Return a human-readable description of a timeline event.
+
+        Dispatches to the appropriate ``_*_text`` method based on ``ev["type"]``.
+        Returns an empty string for unrecognised event types.
+        """
+        handler = self._event_handlers.get(ev.get("type", ""))
+        return handler(ev, lang) if handler else ""
 
     def _champion_kill_text(self, ev: dict, lang: str) -> str:
+        """Format a CHAMPION_KILL event as a human-readable string."""
         killer = self.champ_from_pid(ev.get("killerId"), lang)
         victim = self.champ_from_pid(ev.get("victimId"), lang)
         return f"⚔️ {killer}が{victim}をキル" if lang == "ja" else f"⚔️ {killer} killed {victim}"
 
     def _elite_monster_text(self, ev: dict, lang: str) -> str:
+        """Format an ELITE_MONSTER_KILL event as a human-readable string."""
         killer = self.champ_from_pid(ev.get("killerId"), lang)
         monster = ev.get("monsterType", "")
         sub = ev.get("monsterSubType", "")
@@ -243,6 +277,7 @@ class MatchContext:
         return f"{icon} {killer}が{m}を討伐" if lang == "ja" else f"{icon} {killer} slew {m}"
 
     def _building_text(self, ev: dict, lang: str) -> str:
+        """Format a BUILDING_KILL event as a human-readable string."""
         killer = self.champ_from_pid(ev.get("killerId"), lang)
         building = ev.get("buildingType", "")
         lane = ev.get("laneType", "")
@@ -339,7 +374,12 @@ class MatchContext:
         return events
 
     def _event_team_id(self, ev: dict) -> int | None:
-        """Determine which team an event belongs to."""
+        """Return the teamId of the primary actor in a timeline event.
+
+        Checks ``participantId``, ``killerId``, ``creatorId``, and ``victimId``
+        in order, returning the teamId of the first valid participant found.
+        Returns ``None`` if no participant can be resolved.
+        """
         for pid_key in ("participantId", "killerId", "creatorId", "victimId"):
             p = self.get_p(ev.get(pid_key))
             if p:
@@ -368,10 +408,21 @@ class MatchContext:
 
 
 def html_escape(s: str) -> str:
+    """Escape a value for safe inclusion in HTML text or attribute values."""
     return html.escape(str(s), quote=True)
 
 
 def table_html(rows: list[dict], title_key: str, team_id: int) -> str:
+    """Render a player stats table as an HTML ``<section>`` string.
+
+    Args:
+        rows:      List of player row dicts produced by ``MatchContext.build_player_row``.
+        title_key: i18n key — ``"ally_team"`` or ``"enemy_team"``.
+        team_id:   Numeric team ID (100 or 200) written to ``data-i18n-team``.
+
+    Returns:
+        An HTML fragment containing a ``<section class="card">`` with a ``<table>``.
+    """
     title_ja = "味方チーム" if title_key == "ally_team" else "敵チーム"
     head = [
         "POS",
@@ -427,6 +478,27 @@ def build_html(
     dd_version: str,
     lang: str,
 ) -> str:
+    """Build and return the full self-contained HTML document as a string.
+
+    Inlines ``style.css`` and ``main.js`` from ``src/templates/``, injects
+    all match data as JSON constants, and assembles stats tables, chart canvases,
+    and the timeline event log into a single dark-theme HTML page.
+
+    Args:
+        ctx:           Populated ``MatchContext`` for participant/team lookups.
+        match:         Raw match detail JSON (``JP1_*.json``).
+        match_path:    Path to the match JSON file (used in the footer metadata).
+        timeline_path: Path to the timeline JSON file (used in the footer metadata).
+        friend_rows:   Player row dicts for the user's team.
+        enemy_rows:    Player row dicts for the opposing team.
+        events:        Filtered/sorted timeline event list.
+        gold_frames:   Per-frame gold differential list.
+        dd_version:    Data Dragon version string (e.g. ``"15.1.1"``).
+        lang:          Display language — ``"ja"`` or ``"en"``.
+
+    Returns:
+        A complete ``<!doctype html>`` string ready to write to disk.
+    """
     friend_team_id = ctx.friend_team_id
     enemy_team_id = ctx.enemy_team_id
 
@@ -576,7 +648,22 @@ const DD_VERSION = "{dd_version}";
 """
 
 
-def write_csv(team100: list[dict], team200: list[dict], events: list[dict], out_team: Path, out_events: Path) -> None:
+def write_csv(
+    team100: list[dict],
+    team200: list[dict],
+    events: list[dict],
+    out_team: Path,
+    out_events: Path,
+) -> None:
+    """Write player stats and timeline events to two CSV files.
+
+    Args:
+        team100:    Player row dicts for team 100.
+        team200:    Player row dicts for team 200.
+        events:     Filtered timeline event list from ``MatchContext.build_events``.
+        out_team:   Destination path for the team stats CSV.
+        out_events: Destination path for the events CSV.
+    """
     with out_team.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(
@@ -637,6 +724,13 @@ def write_csv(team100: list[dict], team200: list[dict], events: list[dict], out_
 
 
 def main(argv=None):
+    """CLI entry point: parse args, load JSONs, generate HTML + CSV, print paths.
+
+    Args:
+        argv: Argument list passed to ``ArgumentParser.parse_args``.
+              ``None`` reads from ``sys.argv`` (standard CLI behaviour).
+              Pass ``[]`` to use all defaults (e.g. when called from ``fetch_match_data``).
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--dir",
