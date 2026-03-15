@@ -8,43 +8,13 @@ from pathlib import Path
 
 import requests
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from shared import load_env, PLATFORM_TO_REGION  # noqa: E402
+
 # --- プロジェクトルートと各ディレクトリ ---
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 ARCHIVE_DIR = DATA_DIR / "archive"
-
-
-# --- .env パーサー ---
-def load_env(path):
-    env = {}
-    with open(path, "r", encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, val = line.partition("=")
-            env[key.strip()] = val.strip()
-    return env
-
-
-PLATFORM_TO_REGION = {
-    "BR1": "americas",
-    "LA1": "americas",
-    "LA2": "americas",
-    "NA1": "americas",
-    "EUN1": "europe",
-    "EUW1": "europe",
-    "TR1": "europe",
-    "RU": "europe",
-    "JP1": "asia",
-    "KR": "asia",
-    "OC1": "sea",
-    "PH2": "sea",
-    "SG2": "sea",
-    "TH2": "sea",
-    "TW2": "sea",
-    "VN2": "sea",
-}
 
 QUEUE_PRESETS = {
     "swift": 1700,
