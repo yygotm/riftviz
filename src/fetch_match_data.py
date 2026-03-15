@@ -83,12 +83,13 @@ def main() -> None:
     ap = argparse.ArgumentParser(
         description="Fetch latest LoL match and generate HTML viewer"
     )
+    ap.add_argument("--debug", action="store_true", help="Print raw API responses for debugging")
     ap.add_argument(
         "--queue",
         "-q",
         default="swift",
         help=(
-            "Queue to fetch. Named presets: swift (1700), ranked-solo (420), "
+            "Queue to fetch. Named presets: swift (480), ranked-solo (420), "
             "ranked-flex (440), normal-draft (400), normal-blind (430), aram (450). "
             "Or pass a numeric queue ID directly. Default: swift"
         ),
@@ -150,6 +151,10 @@ def main() -> None:
         f"by-puuid/{puuid}/ids?start=0&count=5&queue={queue_id}"
     )
     ids_res = _get_json(ids_url, headers)
+    if args.debug:
+        print(f"[DEBUG] URL: {ids_url}")
+        print(f"[DEBUG] Status: {ids_res.status_code}")
+        print(f"[DEBUG] Response: {ids_res.text}")
     if ids_res.status_code != 200:
         _handle_error(ids_res, "match IDs", lang)
 
