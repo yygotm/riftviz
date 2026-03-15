@@ -1,6 +1,6 @@
 # riftviz
 
-A local League of Legends match analysis tool that fetches data from the Riot Games API and generates a self-contained HTML viewer with interactive charts and a visual event timeline.
+A local League of Legends match analysis tool that fetches data from the Riot Games API, generates a self-contained HTML viewer with interactive charts, and produces AI-powered coaching reports.
 
 ---
 
@@ -34,12 +34,20 @@ A local League of Legends match analysis tool that fetches data from the Riot Ga
 - Gold border highlight for the tracked player's events
 - JA / EN language toggle button
 
+**AI Analysis (`analyzer.py`)**
+- Death × objective correlation — finds nearby dragon/baron/tower events within ±60 s of each death
+- Lane matchup comparison against the lane opponent
+- Team-rank for damage, gold, CS, KDA, vision, CC
+- Saves a Markdown coaching report to `output/analysis_*.md`
+- Supports **Gemini** (free tier, default) and **Claude** (paid)
+
 ---
 
 ## Requirements
 
 - Python 3.10+
 - Riot Games API key — get one at [developer.riotgames.com](https://developer.riotgames.com)
+- *(Optional)* Gemini API key for AI analysis — get one free at [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
 
 ---
 
@@ -48,6 +56,7 @@ A local League of Legends match analysis tool that fetches data from the Riot Ga
 ```bash
 git clone https://github.com/yygotm/riftviz.git
 cd riftviz
+pip install requests google-genai anthropic   # anthropic only needed for --provider claude
 ```
 
 ### 1. Get a Riot API Key
@@ -57,16 +66,6 @@ cd riftviz
 3. Copy the key (format: `RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`)
 
 > **Note:** Development API keys expire every 24 hours. Return to the dashboard and regenerate before each session.
-
-Create a `.env` file in the project root with the following three values:
-
-```
-API_KEY=RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-PLATFORM=JP1
-PUUID=your-puuid-here
-```
-
-**PLATFORM** options: `JP1` `KR` `NA1` `EUW1` `EUN1` `BR1` `LA1` `LA2` `TR1` `RU` `OC1` `PH2` `SG2` `TH2` `TW2` `VN2`
 
 ### 2. Get your PUUID
 
@@ -90,7 +89,24 @@ The response looks like:
 }
 ```
 
-Copy the `puuid` value into your `.env` file as `PUUID=...`.
+### 3. Create `.env`
+
+Create a `.env` file in the project root:
+
+```
+API_KEY=RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+PLATFORM=JP1
+PUUID=your-puuid-here
+LANG=ja
+
+# Optional — required only for Step 3 (AI analysis)
+GEMINI_API_KEY=AIzaSy...          # free tier: aistudio.google.com/app/apikey
+ANTHROPIC_API_KEY=sk-ant-...      # paid: console.anthropic.com
+```
+
+**PLATFORM** options: `JP1` `KR` `NA1` `EUW1` `EUN1` `BR1` `LA1` `LA2` `TR1` `RU` `OC1` `PH2` `SG2` `TH2` `TW2` `VN2`
+
+**LANG** options: `ja` (default) or `en`
 
 ---
 
@@ -104,12 +120,9 @@ python src/fetch_match_data.py
 
 # Ranked Solo/Duo
 python src/fetch_match_data.py --queue ranked-solo
-
-# Ranked Flex
-python src/fetch_match_data.py --queue ranked-flex
 ```
 
-Pulls the latest match from the Riot API, saves it to `data/`, and automatically generates the HTML viewer.
+Pulls the latest match from the Riot API, saves JSON to `data/`, and automatically generates the HTML viewer + CSV.
 
 **`--queue` / `-q` options:**
 
@@ -132,7 +145,7 @@ python src/lol_html_viewer_auto.py
 build_viewer.bat
 ```
 
-### Options
+**Options:**
 
 ```bash
 # Skip CSV output
@@ -140,9 +153,41 @@ python src/lol_html_viewer_auto.py --no-csv
 
 # Use a specific data directory
 python src/lol_html_viewer_auto.py --dir path/to/dir
+
+# Regenerate HTML for all archived matches
+python src/lol_html_viewer_auto.py --dir data/archive --all
+
+# Regenerate the 10 most recent archived matches
+python src/lol_html_viewer_auto.py --dir data/archive --all -n 10
 ```
 
-Output is saved to `output/out_TIMESTAMP.html`. Open it directly in your browser — no server needed.
+Output is saved to `output/out_TIMESTAMP.html` (single match) or `output/out_JP1_MATCHID.html` (batch). Open directly in your browser — no server needed.
+
+### Step 3 — AI analysis (requires `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` in `.env`)
+
+```bash
+# Analyze the latest match with Gemini (free, default)
+python src/analyzer.py
+
+# Specify the result explicitly
+python src/analyzer.py --result 勝利
+python src/analyzer.py --result win --lang en
+
+# Use Claude instead
+python src/analyzer.py --provider claude
+```
+
+Reads the latest CSV pair from `output/`, builds a structured prompt (team ranking, lane matchup, death sequences, objective totals), calls the AI, and saves `output/analysis_TIMESTAMP.md`.
+
+**Options:**
+
+| Flag | Default | Description |
+|---|---|---|
+| `--provider` | `gemini` | AI provider: `gemini` (free) or `claude` (paid) |
+| `--result` | *(inferred)* | Match result: `win`/`loss` or `勝利`/`敗北` |
+| `--lang` | `ja` | Report language: `ja` or `en` |
+| `--team` | *(latest)* | Path to a specific team stats CSV |
+| `--events` | *(latest)* | Path to a specific events CSV |
 
 ---
 
@@ -150,13 +195,20 @@ Output is saved to `output/out_TIMESTAMP.html`. Open it directly in your browser
 
 ```
 riftviz/
-├── .env                         # API_KEY, PLATFORM, PUUID (gitignored)
-├── build_viewer.bat             # Windows shortcut for HTML generation
+├── .env                         # API_KEY, PLATFORM, PUUID, LANG, GEMINI_API_KEY (gitignored)
+├── build_viewer.bat             # Windows shortcut for Step 2
 ├── src/
-│   ├── fetch_match_data.py      # Fetch match data from Riot API
-│   └── lol_html_viewer_auto.py  # Generate the HTML viewer
+│   ├── fetch_match_data.py      # Step 1 — fetch match data from Riot API
+│   ├── lol_html_viewer_auto.py  # Step 2 — generate the HTML viewer + CSV
+│   ├── analyzer.py              # Step 3 — AI coaching report via Gemini / Claude
+│   ├── constants.py             # Shared constants (platform map, queue presets, etc.)
+│   └── templates/               # Inlined CSS / JS for the self-contained HTML
+├── assets/
+│   └── 00_champ.json            # Champion ID → name fallback map
 ├── data/                        # Match JSON files (gitignored)
-└── output/                      # Generated HTML / CSV (gitignored)
+│   └── archive/                 # Previous match JSONs (auto-archived)
+└── output/                      # Generated HTML, CSV, and analysis reports (gitignored)
+    └── archive/                 # Previous outputs (auto-archived after each run)
 ```
 
 ---

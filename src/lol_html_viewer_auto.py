@@ -827,9 +827,9 @@ def main(argv=None):
     ap.add_argument(
         "--dir",
         default=str(DATA_DIR),
-        help="JSONが置いてあるディレクトリ（デフォルト: data/）",
+        help="Directory containing match JSON files (default: data/)",
     )
-    ap.add_argument("--no-csv", action="store_true", help="CSVを出さない（HTMLのみ）")
+    ap.add_argument("--no-csv", action="store_true", help="Skip CSV output — generate HTML only")
     ap.add_argument(
         "--lang",
         default="ja",
@@ -840,7 +840,7 @@ def main(argv=None):
         "--all",
         action="store_true",
         dest="all_pairs",
-        help="指定ディレクトリ内の全試合ペアをHTMLに変換する（デフォルトは最新1件のみ）",
+        help="Convert every match pair in --dir to HTML (default: latest only)",
     )
     ap.add_argument(
         "--count",
@@ -848,7 +848,7 @@ def main(argv=None):
         type=int,
         default=None,
         metavar="N",
-        help="--all と組み合わせて最新N件のみ処理する（例: --all --count 10）",
+        help="Used with --all: process only the N most recent matches (e.g. --all -n 10)",
     )
     args = ap.parse_args(argv)
 

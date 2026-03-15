@@ -33,7 +33,7 @@ _EVENTS_GLOB = "out_*_events.csv"
 
 # Model identifiers per provider
 _MODELS = {
-    "gemini": "gemini-1.5-flash",
+    "gemini": "gemini-2.0-flash-lite",
     "claude": "claude-sonnet-4-6",
 }
 
@@ -414,14 +414,17 @@ def _call_gemini(prompt: str, api_key: str, lang: str) -> str:
     Returns:
         The model's response as a string.
     """
-    import google.generativeai as genai  # lazy import — only needed for this provider
+    from google import genai  # lazy import — only needed for this provider
+    from google.genai import types
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        model_name=_MODELS["gemini"],
-        system_instruction=_build_system_prompt(lang),
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(
+        model=_MODELS["gemini"],
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=_build_system_prompt(lang),
+        ),
     )
-    response = model.generate_content(prompt)
     return response.text
 
 
@@ -459,14 +462,14 @@ def main() -> None:
     ap.add_argument(
         "--result",
         default=None,
-        help="Match result: '勝利' / '敗北' / 'win' / 'loss'. Auto-detected if omitted.",
+        help="Match result: 'win' / 'loss' (or '勝利' / '敗北'). Inferred by AI if omitted.",
     )
-    ap.add_argument("--lang", default="ja", choices=["ja", "en"], help="Output language (default: ja)")
+    ap.add_argument("--lang", default="ja", choices=["ja", "en"], help="Report language (default: ja)")
     ap.add_argument(
         "--provider",
         default="gemini",
         choices=["gemini", "claude"],
-        help="AI provider to use (default: gemini — free tier available)",
+        help="AI provider: gemini (free, default) or claude (paid)",
     )
     args = ap.parse_args()
 
