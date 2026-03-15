@@ -9,6 +9,10 @@ from pathlib import Path
 
 import requests
 
+# Ensure emoji and Japanese text print correctly on Windows (cp932 consoles).
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from constants import PLATFORM_TO_REGION, QUEUE_PRESETS, load_env  # noqa: E402
 

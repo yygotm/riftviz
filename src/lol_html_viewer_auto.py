@@ -18,6 +18,10 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
+# Ensure emoji and Japanese text print correctly on Windows (cp932 consoles).
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from constants import (  # noqa: E402
     ALLOWED_EVENT_TYPES,
@@ -123,9 +127,9 @@ def pick_all_pairs(base_dir: Path) -> list[tuple[Path, Path]]:
         tl_name = f"{PLATFORM}_{game_id}_timeline.json"
         if tl_name not in files:
             print(
-                f"[SKIP] timeline nashi: {name}"
+                f"⚠️  timeline なし → スキップ: {name}"
                 if _LANG == "ja"
-                else f"[SKIP] no timeline: {name}"
+                else f"⚠️  no timeline — skipping: {name}"
             )
             continue
         pairs.append((match_path, files[tl_name]))
@@ -865,16 +869,16 @@ def main(argv=None):
             pairs = pairs[-args.count:]   # newest N (list is sorted oldest-first)
         total = len(pairs)
         print(
-            f"[batch] {total} 試合分のHTMLを生成します..." if args.lang == "ja"
-            else f"[batch] Generating HTML for {total} matches..."
+            f"📂 {total} 試合分のHTMLを生成します..." if args.lang == "ja"
+            else f"📂 Generating HTML for {total} matches..."
         )
         for i, (match_path, timeline_path) in enumerate(pairs, 1):
             print(f"\n[{i}/{total}] {match_path.name}")
             stem = MATCH_RE.match(match_path.name).group(0).removesuffix(".json")
             _process_one_pair(match_path, timeline_path, args.no_csv, args.lang, stem=stem)
         print(
-            f"\n[done] {total} HTML -> output/" if args.lang == "ja"
-            else f"\n[done] {total} HTML files written to output/"
+            f"\n✅ {total} 試合のHTML生成完了 → output/" if args.lang == "ja"
+            else f"\n✅ Done — {total} HTML files written to output/"
         )
         return True  # caller should skip organize_all_outputs in batch mode
     else:
