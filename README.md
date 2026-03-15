@@ -126,15 +126,25 @@ python src/fetch_match_data.py
 
 # Ranked Solo/Duo
 python src/fetch_match_data.py --queue ranked-solo
+
+# Debug: print raw API URL and response
+python src/fetch_match_data.py --debug
 ```
 
 Pulls the latest match from the Riot API, saves JSON to `data/`, and automatically generates the HTML viewer + CSV.
 
-**`--queue` / `-q` options:**
+**Options:**
+
+| Flag | Description |
+|---|---|
+| `--queue` / `-q` | Queue to fetch (default: `swift`). See table below. |
+| `--debug` | Print raw API URL and response — useful when no matches are returned. |
+
+**`--queue` presets:**
 
 | Name | Queue ID | Mode |
 |---|---|---|
-| `swift` | 1700 | Swift Play (default) |
+| `swift` | 480 | Swift Play (default) |
 | `ranked-solo` | 420 | Ranked Solo/Duo |
 | `ranked-flex` | 440 | Ranked Flex |
 | `normal-draft` | 400 | Normal Draft |
