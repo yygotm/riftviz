@@ -19,7 +19,6 @@ const I18N = {
     search_ph:'検索: 例) キル / ドラゴン / ワード / ルル など',
     team_all:'Team: 全部', team_ally:'味方', team_enemy:'敵',
     type_all:'Type: 全部',
-    detail_hide:'詳細: 非表示', detail_show:'詳細: 表示',
     pill_count:'イベント件数',
   },
   en: {
@@ -41,7 +40,6 @@ const I18N = {
     search_ph:'Search: e.g. kill / dragon / ward / champion name',
     team_all:'Team: All', team_ally:'Ally', team_enemy:'Enemy',
     type_all:'Type: All',
-    detail_hide:'Detail: Hide', detail_show:'Detail: Show',
     pill_count:'Events',
   },
 };
@@ -102,7 +100,7 @@ function killerGroupHtml(killerPid, assistPids) {
 }
 
 // イベント行HTML生成
-function buildEventHtml(e, showDetail) {
+function buildEventHtml(e) {
   const r = e.raw || {};
   const sideClass = (e.teamId === userTeamId) ? 'friend' : (e.teamId ? 'enemy' : '');
   const userClass  = e.is_user ? ' user-event' : '';
@@ -123,26 +121,16 @@ function buildEventHtml(e, showDetail) {
     iconsHtml = champImg(r.killerId, 'killer') + `<span class="ev-verb">${icon}</span>`;
   }
 
-  let detailHtml = '';
-  if (showDetail) {
-    detailHtml = `<details style="font-size:11px;padding:2px 8px 6px;flex-basis:100%">` +
-                 `<summary>raw event (JSON)</summary>` +
-                 `<pre style="overflow:auto;max-height:200px">${escapeHtml(JSON.stringify(e.raw, null, 2))}</pre>` +
-                 `</details>`;
-  }
-
   return `<div class="ev-row ${sideClass}${userClass}">` +
          `<div class="ev-time">${e.time}</div>` +
          `<div class="ev-icons">${iconsHtml}</div>` +
          `<div class="ev-label">${escapeHtml(labelText)}</div>` +
-         detailHtml +
          `</div>`;
 }
 
 const $q = document.getElementById('q');
 const $team = document.getElementById('team');
 const $type = document.getElementById('type');
-const $detail = document.getElementById('detail');
 const $events = document.getElementById('events');
 const $count = document.getElementById('count');
 
@@ -168,7 +156,6 @@ function render() {
   const q = ($q.value || '').toLowerCase();
   const team = $team.value;
   const type = $type.value;
-  const showDetail = $detail.value === "1";
 
   const filtered = events.filter(e => {
     if (team && String(e.teamId) !== team) return false;
@@ -184,12 +171,12 @@ function render() {
   $events.innerHTML = "";
 
   for (const e of filtered) {
-    $events.insertAdjacentHTML('beforeend', buildEventHtml(e, showDetail));
+    $events.insertAdjacentHTML('beforeend', buildEventHtml(e));
   }
 }
 
-[$q, $team, $type, $detail].forEach(el => el.addEventListener('input', render));
-[$team, $type, $detail].forEach(el => el.addEventListener('change', render));
+[$q, $team, $type].forEach(el => el.addEventListener('input', render));
+[$team, $type].forEach(el => el.addEventListener('change', render));
 
 buildTypeOptions();
 render();

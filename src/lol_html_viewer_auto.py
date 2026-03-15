@@ -408,7 +408,6 @@ class MatchContext:
                     "text": text_ja,
                     "text_en": text_en,
                     "is_user": user_involved,
-                    "raw": ev,
                 })
         events.sort(key=lambda x: x["t"])
         return events
@@ -597,7 +596,7 @@ def build_html(
 </head>
 <body>
 <header>
-  <h1>LoL Match Viewer — {html_escape(match['metadata'].get('matchId',''))}</h1>  # noqa: E501,E231,E228
+  <h1>LoL Match Viewer — {html_escape(match['metadata'].get('matchId',''))}</h1>
   <div class=\"meta\">{html_escape(meta)}</div>
   <div class=\"meta\">{html_escape(used_files)}</div>
   <button id=\"lang-toggle\" onclick=\"toggleLang()\">🌐 EN</button>
@@ -643,7 +642,7 @@ def build_html(
   <section class=\"card\">
     <h2 data-i18n=\"timeline_title\">時系列イベント（キル / オブジェクト）</h2>
     <div class=\"toolbar\">
-      <input id=\"q\" data-i18n-placeholder=\"search_ph\" placeholder=\"検索: 例) キル / ドラゴン / ワード / ルル など\" style=\"flex:1; min-width: 260px;\">  # noqa: E501,E231,E228
+      <input id=\"q\" data-i18n-placeholder=\"search_ph\" placeholder=\"検索: 例) キル / ドラゴン / ワード / ルル など\" style=\"flex:1; min-width: 260px;\">
       <select id=\"team\">
         <option value=\"\" data-i18n=\"team_all\">Team: 全部</option>
         <option value=\"{friend_team_id}\" data-i18n=\"team_ally\">味方</option>
@@ -651,10 +650,6 @@ def build_html(
       </select>
       <select id=\"type\">
         <option value=\"\" data-i18n=\"type_all\">Type: 全部</option>
-      </select>
-      <select id=\"detail\">
-        <option value=\"0\" data-i18n=\"detail_hide\">詳細: 非表示</option>
-        <option value=\"1\" data-i18n=\"detail_show\">詳細: 表示</option>
       </select>
     </div>
 
@@ -754,7 +749,7 @@ def write_csv(
 
     with out_events.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow(["t_ms", "time", "teamId", "team", "type", "text", "raw_json"])
+        w.writerow(["t_ms", "time", "teamId", "team", "type", "text"])
         for e in events:
             w.writerow(
                 [
@@ -764,7 +759,6 @@ def write_csv(
                     e["team"],
                     e["type"],
                     e["text"],
-                    json.dumps(e["raw"], ensure_ascii=False),
                 ]
             )
 
