@@ -169,10 +169,6 @@ Output is saved to `output/out_TIMESTAMP.html` (single match) or `output/out_JP1
 # Analyze the latest match with Gemini (free, default)
 python src/analyzer.py
 
-# Specify the result explicitly
-python src/analyzer.py --result 勝利
-python src/analyzer.py --result win --lang en
-
 # Use Claude instead
 python src/analyzer.py --provider claude
 ```
@@ -184,7 +180,6 @@ Reads the latest CSV pair from `output/`, builds a structured prompt (team ranki
 | Flag | Default | Description |
 |---|---|---|
 | `--provider` | `gemini` | AI provider: `gemini` (free) or `claude` (paid) |
-| `--result` | *(inferred)* | Match result: `win`/`loss` or `勝利`/`敗北` |
 | `--lang` | `ja` | Report language: `ja` or `en` |
 | `--team` | *(latest)* | Path to a specific team stats CSV |
 | `--events` | *(latest)* | Path to a specific events CSV |
