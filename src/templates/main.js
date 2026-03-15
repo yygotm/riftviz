@@ -101,24 +101,23 @@ function killerGroupHtml(killerPid, assistPids) {
 
 // イベント行HTML生成
 function buildEventHtml(e) {
-  const r = e.raw || {};
   const sideClass = (e.teamId === userTeamId) ? 'friend' : (e.teamId ? 'enemy' : '');
   const userClass  = e.is_user ? ' user-event' : '';
   let iconsHtml = '';
   const labelText = currentLang === 'ja' ? e.text : (e.text_en || e.text);
 
   if (e.type === 'CHAMPION_KILL') {
-    iconsHtml = killerGroupHtml(r.killerId, r.assistingParticipantIds) +
+    iconsHtml = killerGroupHtml(e.killerId, e.assistingParticipantIds) +
                 '<span class="ev-verb">⚔️</span>' +
-                champImg(r.victimId, 'victim');
+                champImg(e.victimId, 'victim');
   } else if (e.type === 'BUILDING_KILL') {
-    const icon = (r.buildingType === 'INHIBITOR_BUILDING') ? '💎' : '🏰';
-    iconsHtml = killerGroupHtml(r.killerId, r.assistingParticipantIds) +
+    const icon = (e.buildingType === 'INHIBITOR_BUILDING') ? '💎' : '🏰';
+    iconsHtml = killerGroupHtml(e.killerId, e.assistingParticipantIds) +
                 `<span class="ev-verb">${icon}</span>`;
   } else if (e.type === 'ELITE_MONSTER_KILL') {
-    const icon = r.monsterType === 'BARON_NASHOR' ? '🐗' :
-                 r.monsterType === 'DRAGON'       ? '🐉' : '👾';
-    iconsHtml = champImg(r.killerId, 'killer') + `<span class="ev-verb">${icon}</span>`;
+    const icon = e.monsterType === 'BARON_NASHOR' ? '🐗' :
+                 e.monsterType === 'DRAGON'       ? '🐉' : '👾';
+    iconsHtml = champImg(e.killerId, 'killer') + `<span class="ev-verb">${icon}</span>`;
   }
 
   return `<div class="ev-row ${sideClass}${userClass}">` +

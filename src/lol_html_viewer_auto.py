@@ -408,6 +408,12 @@ class MatchContext:
                     "text": text_ja,
                     "text_en": text_en,
                     "is_user": user_involved,
+                    # fields needed by JS for champion icon rendering
+                    "killerId": ev.get("killerId"),
+                    "victimId": ev.get("victimId"),
+                    "assistingParticipantIds": ev.get("assistingParticipantIds", []),
+                    "buildingType": ev.get("buildingType", ""),
+                    "monsterType": ev.get("monsterType", ""),
                 })
         events.sort(key=lambda x: x["t"])
         return events
