@@ -365,6 +365,7 @@ class MatchContext:
             "cc": p.get("timeCCingOthers", 0) or 0,
             "kp": p.get("challenges", {}).get("killParticipation", 0) or 0,
             "dead_s": p.get("totalTimeSpentDead", 0) or 0,
+            "win": bool(p.get("win", False)),
             "is_user": (p.get("participantId") == self.user_pid),
         }
 
@@ -719,6 +720,7 @@ def write_csv(
                 "cc",
                 "kp",
                 "dead_s",
+                "win",
                 "is_user",
             ]
         )
@@ -741,6 +743,7 @@ def write_csv(
                     r["cc"],
                     f"{r['kp']:.4f}",
                     r["dead_s"],
+                    int(r["win"]),
                     int(r["is_user"]),
                 ]
             )

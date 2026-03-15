@@ -67,6 +67,7 @@ def _load_team_csv(path: Path) -> list[dict]:
                     "cc": int(row["cc"]),
                     "kp": float(row.get("kp", 0)),
                     "dead_s": int(row.get("dead_s", 0)),
+                    "win": int(row.get("win", 0)) == 1,
                     "is_user": int(row["is_user"]) == 1,
                 }
             )
@@ -509,11 +510,17 @@ def main() -> None:
     team_rows = _load_team_csv(team_path)
     events = _load_events_csv(events_path)
 
-    # Infer or accept match result
+    # Resolve match result: explicit flag > CSV win column > ask AI to infer
     if args.result:
         game_result = args.result
     else:
-        game_result = "不明（データから推定してください）" if args.lang == "ja" else "Unknown (infer from data)"
+        user_row = next((r for r in team_rows if r["is_user"]), None)
+        if user_row is not None and "win" in user_row:
+            game_result = ("勝利" if args.lang == "ja" else "Win") if user_row["win"] \
+                else ("敗北" if args.lang == "ja" else "Loss")
+        else:
+            game_result = "不明（データから推定してください）" if args.lang == "ja" \
+                else "Unknown (infer from data)"
 
     prompt = _build_prompt(team_rows, events, game_result, args.lang)
 
