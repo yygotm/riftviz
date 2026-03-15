@@ -313,7 +313,11 @@ class MatchContext:
 
     def _building_text(self, ev: dict, lang: str) -> str:
         """Format a BUILDING_KILL event as a human-readable string."""
-        killer = self.champ_from_pid(ev.get("killerId"), lang)
+        killer_id = ev.get("killerId") or 0
+        if killer_id == 0:
+            killer = "ミニオン" if lang == "ja" else "Minion"
+        else:
+            killer = self.champ_from_pid(killer_id, lang)
         building = ev.get("buildingType", "")
         lane = ev.get("laneType", "")
 
