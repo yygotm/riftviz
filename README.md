@@ -38,7 +38,7 @@ A local League of Legends match analysis tool that fetches data from the Riot Ga
 - Death × objective correlation — finds nearby dragon/baron/tower events within ±60 s of each death
 - Lane matchup comparison against the lane opponent
 - Team-rank for damage, gold, CS, KDA, vision, CC
-- Saves a Markdown coaching report to `output/analysis_*.md`
+- Saves an HTML report to `output/analysis_*.html` — open directly in your browser
 - Supports **Gemini** (free tier, default) and **Claude** (paid)
 
 ---
@@ -189,14 +189,14 @@ python src/analyzer.py
 python src/analyzer.py --provider claude
 ```
 
-Reads the latest CSV pair from `output/`, builds a structured prompt (team ranking, lane matchup, death sequences, objective totals), calls the AI, and saves `output/analysis_TIMESTAMP.md`.
+Reads the latest CSV pair from `output/`, builds a structured prompt (team ranking, lane matchup, death sequences, objective totals), calls the AI, and saves `output/analysis_TIMESTAMP.html`. Open the file directly in your browser — no server needed.
 
 **Options:**
 
 | Flag | Default | Description |
 |---|---|---|
 | `--provider` | `gemini` | AI provider: `gemini` (free) or `claude` (paid) |
-| `--lang` | `en` | Report language: `en` or `ja` |
+| `--lang` | *(from `.env` `LANG`, default `ja`)* | Report language: `ja` or `en` |
 | `--team` | *(latest)* | Path to a specific team stats CSV |
 | `--events` | *(latest)* | Path to a specific events CSV |
 
