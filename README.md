@@ -94,7 +94,7 @@ The response looks like:
 Copy the example and fill in your keys:
 
 ```bash
-# Mac / Linux / Git Bash / PowerShell
+# Mac / Git Bash / PowerShell
 cp .env.example .env
 
 # Windows (Command Prompt / cmd.exe)
