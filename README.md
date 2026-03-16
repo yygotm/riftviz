@@ -13,7 +13,7 @@ A local League of Legends match analysis tool that fetches data from the Riot Ga
 <img width="1384" height="411" alt="Damage dealt vs received scatter plot" src="https://github.com/user-attachments/assets/e31fbcff-cf02-48cb-9e60-687b638e230a" />
 <img width="1384" height="1034" alt="Performance radar (Ally / Enemy) + KP / Dead Time" src="https://github.com/user-attachments/assets/5d11873c-530e-47dc-8140-1b4aa695fce4" />
 <img width="1384" height="311" alt="Team gold lead timeline" src="https://github.com/user-attachments/assets/18b940de-0b1b-4047-abb9-244d9c53d5d4" />
-<img width="1358" height="900" alt="Event timeline" src="https://github.com/user-attachments/assets/8d26b4a0-e4d7-402c-ae07-cff9ff32575a" />
+<img width="1358" height="900" alt="Event timeline" src="https://github.com/user-attachments/assets/8d26b4a0-e4d7-402c-ae70-cff9ff32575a" />
 
 ---
 
