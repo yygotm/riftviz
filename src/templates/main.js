@@ -85,9 +85,9 @@ _players.forEach(p => { if (p.pid) pid2player[p.pid] = p; });
 function champImg(pid, cls) {
   const p = pid2player[pid];
   if (!p || !p.champName) return '';
-  const userCls = p.is_user ? ' user' : '';
+  const sideCls = p.is_user ? ' user' : (p.teamId === userTeamId ? ' friend' : ' enemy');
   const src = `https://ddragon.leagueoflegends.com/cdn/${_DD_VER}/img/champion/${p.champName}.png`;
-  return `<img class="ev-champ ${cls}${userCls}" src="${src}" title="${p.champ}" loading="lazy">`;
+  return `<img class="ev-champ ${cls}${sideCls}" src="${src}" title="${p.champ}" loading="lazy">`;
 }
 
 // キラー + アシスト縦並びグループ
@@ -102,13 +102,12 @@ function killerGroupHtml(killerPid, assistPids) {
 // イベント行HTML生成
 function buildEventHtml(e) {
   const sideClass = (e.teamId === userTeamId) ? 'friend' : (e.teamId ? 'enemy' : '');
-  const userClass  = e.is_user ? ' user-event' : '';
   let iconsHtml = '';
   const labelText = currentLang === 'ja' ? e.text : (e.text_en || e.text);
 
   if (e.type === 'CHAMPION_KILL') {
     iconsHtml = killerGroupHtml(e.killerId, e.assistingParticipantIds) +
-                '<span class="ev-verb">⚔️</span>' +
+                `<span class="ev-verb">⚔️</span>` +
                 champImg(e.victimId, 'victim');
   } else if (e.type === 'BUILDING_KILL') {
     const icon = (e.buildingType === 'INHIBITOR_BUILDING') ? '💎' : '🏰';
@@ -120,7 +119,7 @@ function buildEventHtml(e) {
     iconsHtml = champImg(e.killerId, 'killer') + `<span class="ev-verb">${icon}</span>`;
   }
 
-  return `<div class="ev-row ${sideClass}${userClass}">` +
+  return `<div class="ev-row ${sideClass}">` +
          `<div class="ev-time">${e.time}</div>` +
          `<div class="ev-icons">${iconsHtml}</div>` +
          `<div class="ev-label">${escapeHtml(labelText)}</div>` +

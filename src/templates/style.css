@@ -29,28 +29,28 @@
   .event .team { margin-left:auto; }
   .team.blue { color: var(--blue); }
   .team.red { color: var(--red); }
-  .event.user-event { outline: 2px solid #f0c040; background: rgba(240,192,64,0.12) !important; }
   /* ── ビジュアルイベント行 ─────────────────────────────────────── */
   .ev-row { display:flex; align-items:center; gap:8px; padding:6px 10px;
     border-radius:12px; border:1px solid var(--line);
     background:rgba(255,255,255,0.02); min-width:0; overflow:hidden; }
   .ev-row.friend { background:rgba(47,123,246,0.08); }
   .ev-row.enemy  { background:rgba(255,77,90,0.08); }
-  .ev-row.user-event { outline:2px solid #f0c040; background:rgba(240,192,64,0.10) !important; }
   .ev-time { width:44px; font-variant-numeric:tabular-nums;
-    color:var(--muted); font-size:11px; flex-shrink:0; }
+    color:var(--muted); font-size:12px; flex-shrink:0; }
   .ev-icons { display:flex; align-items:center; gap:6px; flex-shrink:0; }
   .ev-killer-group { display:flex; align-items:center; gap:3px; flex-shrink:0; }
   .ev-assists-col { display:flex; flex-direction:column; gap:2px; justify-content:center; }
   .ev-champ { border-radius:50%; object-fit:cover;
     border:1.5px solid rgba(255,255,255,0.2); flex-shrink:0; }
-  .ev-champ.killer { width:48px; height:48px; border-width:2px; border-color:#fbbf24; }
-  .ev-champ.victim  { width:32px; height:32px; border-color:#ff4d5a; filter:brightness(.72); }
-  .ev-champ.assist  { width:24px; height:24px; border-width:1px;
-    border-color:rgba(255,255,255,0.28); }
-  .ev-champ.user    { border-color:#f0c040; box-shadow:0 0 6px #f0c04088; }
+  .ev-champ.killer { width:48px; height:48px; border-width:2px; }
+  .ev-champ.victim  { width:32px; height:32px; filter:brightness(.72); }
+  .ev-champ.assist  { width:24px; height:24px; border-width:1px; }
+  .ev-champ.friend  { border-color:#3b8ef0; }
+  .ev-champ.enemy   { border-color:#ff4d5a; }
+  .ev-champ.user          { border-color:#f0c040; box-shadow:0 0 6px #f0c04088; }
+  .ev-champ.victim.user   { border-width:2.5px; }
   .ev-verb { font-size:18px; flex-shrink:0; line-height:1; }
-  .ev-label { flex:1; font-size:11px; color:var(--muted); white-space:nowrap;
+  .ev-label { flex:1; font-size:13px; color:var(--muted); white-space:nowrap;
     overflow:hidden; text-overflow:ellipsis; }
   details { margin-top: 6px; }
   details summary { cursor:pointer; color: var(--muted); font-size: 12px; }

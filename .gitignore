@@ -9,8 +9,8 @@ data/archive/
 output/
 !output/.gitkeep
 
-# Demo / local-only scripts
-src/make_demo.py
+# Local-only tools (demo generation, screenshots, etc.)
+tools/
 
 # Claude settings
 .claude/

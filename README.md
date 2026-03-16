@@ -6,14 +6,14 @@ A local League of Legends match analysis tool that fetches data from the Riot Ga
 
 ## Demo
 
-<img width="1280" alt="Stats tables" src="https://github.com/user-attachments/assets/1addc6b7-9edd-4d24-8f8d-1c7d9808873b" />
-<img width="1280" alt="KDA Breakdown" src="https://github.com/user-attachments/assets/2f62e7a6-fb82-434a-b0a9-9e5e129534ee" />
-<img width="1280" alt="KDA Ratio / Damage / Gold" src="https://github.com/user-attachments/assets/47bae183-6205-4e90-b4b5-a53cd1b252da" />
-<img width="1280" alt="CS / Vision / CC / Scatter plot" src="https://github.com/user-attachments/assets/cd22b139-afd4-4cf5-98ad-39c855ce9ec9" />
-<img width="1280" alt="Performance radar (Ally / Enemy)" src="https://github.com/user-attachments/assets/c949b35f-13b9-4807-a2c0-3ab76f3f93e8" />
-<img width="1280" alt="Kill Participation / Dead Time" src="https://github.com/user-attachments/assets/4c2ca6d9-8803-4ad4-818d-6f45efb6996d" />
-<img width="1280" alt="Team gold lead timeline" src="https://github.com/user-attachments/assets/9576d5d0-31ec-420a-ac97-416185c4972a" />
-<img width="1280" height="900" alt="Event timeline" src="https://github.com/user-attachments/assets/a0a2ba7e-5076-45c8-ba00-1982f80e94d9" />
+<img width="1400" height="697" alt="Stats tables" src="https://github.com/user-attachments/assets/93eaa2ae-cbc7-4d0f-9cd8-0647b9c5058d" />
+<img width="1384" height="627" alt="KDA Breakdown" src="https://github.com/user-attachments/assets/0195351d-367c-4610-963f-b88510bdddf7" />
+<img width="924" height="607" alt="KDA Ratio / Damage" src="https://github.com/user-attachments/assets/8667ff8a-1a6d-4017-8b84-6e32e99519ef" />
+<img width="1384" height="1210" alt="Gold / CS / Vision / CC" src="https://github.com/user-attachments/assets/e1816570-4b83-4abd-ae93-3a2f315ef89b" />
+<img width="1384" height="411" alt="Damage dealt vs received scatter plot" src="https://github.com/user-attachments/assets/e31fbcff-cf02-48cb-9e60-687b638e230a" />
+<img width="1384" height="1034" alt="Performance radar (Ally / Enemy) + KP / Dead Time" src="https://github.com/user-attachments/assets/5d11873c-530e-47dc-8140-1b4aa695fce4" />
+<img width="1384" height="311" alt="Team gold lead timeline" src="https://github.com/user-attachments/assets/18b940de-0b1b-4047-abb9-244d9c53d5d4" />
+<img width="1358" height="900" alt="Event timeline" src="https://github.com/user-attachments/assets/8d26b4a0-e4d7-402c-ae07-cff9ff32575a" />
 
 ---
 

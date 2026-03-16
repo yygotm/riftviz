@@ -292,7 +292,7 @@ class MatchContext:
         """Format a CHAMPION_KILL event as a human-readable string."""
         killer = self.champ_from_pid(ev.get("killerId"), lang)
         victim = self.champ_from_pid(ev.get("victimId"), lang)
-        return f"⚔️ {killer}が{victim}をキル" if lang == "ja" else f"⚔️ {killer} killed {victim}"
+        return f"{killer}が{victim}をキル" if lang == "ja" else f"{killer} killed {victim}"
 
     def _elite_monster_text(self, ev: dict, lang: str) -> str:
         """Format an ELITE_MONSTER_KILL event as a human-readable string."""
@@ -309,7 +309,7 @@ class MatchContext:
 
         if sub:
             m = f"{m}（{sub}）" if lang == "ja" else f"{m} ({sub})"
-        return f"{icon} {killer}が{m}を討伐" if lang == "ja" else f"{icon} {killer} slew {m}"
+        return f"{killer}が{m}を討伐" if lang == "ja" else f"{killer} slew {m}"
 
     def _building_text(self, ev: dict, lang: str) -> str:
         """Format a BUILDING_KILL event as a human-readable string."""
@@ -336,10 +336,10 @@ class MatchContext:
 
         if lang == "ja":
             suffix = f"（{lane_label}）" if lane_label else ""
-            return f"{icon} {killer}が{b_ja}{suffix}を破壊"
+            return f"{killer}が{b_ja}{suffix}を破壊"
         else:
             suffix = f" ({lane_label})" if lane_label else ""
-            return f"{icon} {killer} destroyed {b_en}{suffix}"
+            return f"{killer} destroyed {b_en}{suffix}"
 
     # ── Data builders ─────────────────────────────────────────────────────
 
@@ -835,6 +835,7 @@ def main(argv=None):
               ``None`` reads from ``sys.argv`` (standard CLI behaviour).
               Pass ``[]`` to use all defaults (e.g. when called from ``fetch_match_data``).
     """
+    global _LANG
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--dir",
@@ -844,9 +845,9 @@ def main(argv=None):
     ap.add_argument("--no-csv", action="store_true", help="Skip CSV output — generate HTML only")
     ap.add_argument(
         "--lang",
-        default="ja",
+        default=_LANG,
         choices=["ja", "en"],
-        help="Champion name language for the table (default: ja)",
+        help="Champion name language for the table (default: from .env LANG, fallback ja)",
     )
     ap.add_argument(
         "--all",
@@ -864,7 +865,6 @@ def main(argv=None):
     )
     args = ap.parse_args(argv)
 
-    global _LANG
     _LANG = args.lang
 
     base_dir = Path(args.dir).expanduser().resolve()
