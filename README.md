@@ -94,10 +94,10 @@ The response looks like:
 Copy the example and fill in your keys:
 
 ```bash
-# Mac / Linux / Git Bash
+# Mac / Linux / Git Bash / PowerShell
 cp .env.example .env
 
-# Windows (cmd)
+# Windows (Command Prompt / cmd.exe)
 copy .env.example .env
 ```
 
