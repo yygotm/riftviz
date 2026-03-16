@@ -133,6 +133,10 @@ python src/fetch_match_data.py --queue ranked-solo
 
 # Debug: print raw API URL and response
 python src/fetch_match_data.py --debug
+
+# Windows shortcut (double-click or run from terminal)
+riftviz.bat
+riftviz.bat --queue ranked-solo
 ```
 
 Pulls the latest match from the Riot API, saves JSON to `data/`, and automatically generates the HTML viewer + CSV.
@@ -268,7 +272,8 @@ By focusing on these areas, you can leverage your strong scaling and damage outp
 riftviz/
 ├── .env                         # API_KEY, PLATFORM, PUUID, LANG, GEMINI_API_KEY (gitignored)
 ├── .env.example                 # Template — copy to .env and fill in your keys
-├── build_viewer.bat             # Windows shortcut for Step 2
+├── riftviz.bat                  # Windows shortcut for Step 1 (fetch + generate HTML)
+├── build_viewer.bat             # Windows shortcut for Step 2 (regenerate HTML only)
 ├── src/
 │   ├── fetch_match_data.py      # Step 1 — fetch match data from Riot API
 │   ├── lol_html_viewer_auto.py  # Step 2 — generate the HTML viewer + CSV
