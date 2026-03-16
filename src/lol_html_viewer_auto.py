@@ -847,7 +847,7 @@ def main(argv=None):
         "--lang",
         default=_LANG,
         choices=["ja", "en"],
-        help="Champion name language for the table (default: from .env LANG, fallback ja)",
+        help=f"Champion name language for the table (current default: {_LANG!r} — set via .env LANG, fallback 'ja')",
     )
     ap.add_argument(
         "--all",
