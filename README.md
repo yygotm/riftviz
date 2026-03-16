@@ -94,7 +94,11 @@ The response looks like:
 Copy the example and fill in your keys:
 
 ```bash
+# Mac / Linux / Git Bash
 cp .env.example .env
+
+# Windows (cmd)
+copy .env.example .env
 ```
 
 Or create it manually:
